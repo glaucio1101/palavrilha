@@ -29,6 +29,18 @@
   var DATA = null;
   var puzzle = null;      // objeto do quebra-cabeça de hoje
   var puzzleId = 0;       // 1..60
+  var dayIndex = 0;       // dias desde a época (chave estável do desafio diário)
+
+  // Eventos para módulos opcionais (ex.: placar). Nunca quebram o jogo.
+  // Também guarda o último estado em window para quem assinar depois.
+  function emitGame(name, detail) {
+    try {
+      window.__PALAVRILHA__ = window.__PALAVRILHA__ || {};
+      if (name === 'palavrilha:ready') window.__PALAVRILHA__.day = detail;
+      if (name === 'palavrilha:solved') window.__PALAVRILHA__.solved = detail;
+      document.dispatchEvent(new CustomEvent(name, { detail: detail }));
+    } catch (e) {}
+  }
   var state = null;       // { solved:[], hinted:[], startTs:null, completed:false, completedMs:0 }
   var pending = [];       // ids de célula do traçado em andamento
   var dragging = false;
@@ -307,6 +319,8 @@
     shareFeedback.textContent = '';
     shareTextEl.hidden = true;
     say('Quebra-cabeça completo! 🎉', 'good');
+
+    emitGame('palavrilha:solved', solvedDetail());
   }
 
   function countHintsUsed() {
@@ -480,9 +494,19 @@
 
   function pickTodayIndex() {
     var d = new Date();
-    var dayNum = Math.floor(new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime() / 86400000);
+    dayIndex = Math.floor(new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime() / 86400000);
     var n = DATA.count;
-    return ((dayNum % n) + n) % n;
+    return ((dayIndex % n) + n) % n;
+  }
+
+  function solvedDetail() {
+    return {
+      puzzleId: puzzleId,
+      dayIndex: dayIndex,
+      timeMs: state.completedMs || 0,
+      hints: countHintsUsed(),
+      streak: loadStreak().count
+    };
   }
 
   function loadData() {
@@ -529,6 +553,7 @@
       buildBoard();
       buildWordBank();
       attachBoardEvents();
+      emitGame('palavrilha:ready', { puzzleId: puzzleId, dayIndex: dayIndex });
 
       if (state.completed) {
         boardEl.classList.add('done');
@@ -539,6 +564,7 @@
           ' · sequência ' + loadStreak().count;
         winPanel.hidden = false;
         say('Você já resolveu o quebra-cabeça de hoje. Volte amanhã! 🎉', 'good');
+        emitGame('palavrilha:solved', solvedDetail());
       } else {
         if (state.startTs) ensureTick();
         say('Toque numa letra e siga pelas células vizinhas para traçar uma palavra.');

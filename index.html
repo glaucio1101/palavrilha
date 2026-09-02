@@ -77,6 +77,18 @@
     <textarea id="share-text" class="share-text" readonly hidden></textarea>
   </section>
 
+  <section id="lb" class="lb" hidden>
+    <div class="lb-top">
+      <h2>Placar</h2>
+      <div id="lb-tabs" class="lb-tabs" hidden>
+        <button type="button" class="lb-tab is-active" data-tab="global">Global</button>
+        <button type="button" class="lb-tab" data-tab="friends">Amigos</button>
+      </div>
+    </div>
+    <div id="lb-body" class="lb-body"></div>
+    <p id="lb-msg" class="lb-msg" role="status" aria-live="polite"></p>
+  </section>
+
   <footer class="howto">
     <h3>Como jogar</h3>
     <ul>
@@ -94,5 +106,11 @@
 
 <script src="puzzles.js"></script>
 <script src="game.js"></script>
+
+<!-- Placar opcional (global e de amigos). Se firebase-config.js estiver vazio,
+     leaderboard.js não carrega nada e o jogo segue 100% igual e offline.
+     O SDK do Firebase só é baixado sob demanda quando há configuração. -->
+<script src="firebase-config.js"></script>
+<script src="leaderboard.js"></script>
 </body>
 </html>

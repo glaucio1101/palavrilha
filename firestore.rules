@@ -1,0 +1,66 @@
+rules_version = '2';
+
+// Regras de segurança do Firestore para o placar do Palavrilha.
+// Cole em Firebase Console -> Firestore Database -> Rules -> Publish
+// (ou faça deploy com: firebase deploy --only firestore:rules).
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function signedIn() {
+      return request.auth != null;
+    }
+    function isSelf(uid) {
+      return request.auth != null && request.auth.uid == uid;
+    }
+    function nameOk(n) {
+      return n is string && n.size() >= 2 && n.size() <= 16;
+    }
+
+    // Perfis: qualquer pessoa logada pode LER (para montar o placar e achar
+    // amigos por código). Só o dono ESCREVE o próprio perfil.
+    match /users/{uid} {
+      allow get: if signedIn();
+      allow list: if signedIn() && request.query.limit <= 20;
+
+      allow create: if isSelf(uid)
+        && nameOk(request.resource.data.name)
+        && request.resource.data.code is string
+        && request.resource.data.code.size() >= 5
+        && request.resource.data.code.size() <= 8;
+
+      allow update: if isSelf(uid)
+        && (!('name' in request.resource.data) || nameOk(request.resource.data.name))
+        && request.resource.data.code == resource.data.code;   // código não muda
+
+      allow delete: if isSelf(uid);
+
+      // Lista de amigos: cada um edita SOMENTE a própria.
+      match /friends/{friendUid} {
+        allow read, write: if isSelf(uid);
+      }
+    }
+
+    // Pontuações do desafio diário: leitura para quem está logado;
+    // cada pessoa só escreve a própria entrada, com valores dentro de faixas sãs.
+    match /scores/{dayIndex}/entries/{uid} {
+      allow read: if signedIn();
+
+      allow create, update: if isSelf(uid)
+        && request.resource.data.uid == uid
+        && request.resource.data.name is string
+        && request.resource.data.name.size() <= 16
+        && request.resource.data.timeMs is number
+        && request.resource.data.timeMs >= 1000
+        && request.resource.data.timeMs <= 86400000
+        && request.resource.data.hints is number
+        && request.resource.data.hints >= 0
+        && request.resource.data.hints <= 5
+        && request.resource.data.streak is number
+        && request.resource.data.streak >= 0
+        && request.resource.data.puzzleId is number;
+
+      allow delete: if false;
+    }
+  }
+}
