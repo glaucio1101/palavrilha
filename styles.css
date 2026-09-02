@@ -1,0 +1,347 @@
+/* Palavrilha — estilo limpo e minimalista, pensado para tela de celular (390px). */
+
+:root {
+  --bg: #faf6ef;
+  --surface: #ffffff;
+  --ink: #26221d;
+  --ink-soft: #6b6154;
+  --line: #e7ddce;
+
+  --brand: #a8432e;
+  --brand-dark: #7c2d16;
+  --accent: #f2b134;
+
+  --wall: #3a342c;
+
+  --cell-size: 60px;
+  --radius: 14px;
+  --shadow: 0 1px 2px rgba(38, 34, 29, .08), 0 6px 18px rgba(38, 34, 29, .06);
+
+  /* cores das 5 palavras */
+  --w0: #e7c8a0;
+  --w1: #bcd9c8;
+  --w2: #f0c2c0;
+  --w3: #cbc7e8;
+  --w4: #a9d3d8;
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  padding: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  -webkit-text-size-adjust: 100%;
+  -webkit-font-smoothing: antialiased;
+}
+
+body {
+  display: flex;
+  justify-content: center;
+  min-height: 100vh;
+  min-height: 100dvh;
+}
+
+.app {
+  width: 100%;
+  max-width: 430px;
+  padding: 16px 16px calc(28px + env(safe-area-inset-bottom));
+  padding-top: calc(16px + env(safe-area-inset-top));
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+/* ---------- Cabeçalho ---------- */
+.topbar { display: flex; align-items: center; }
+
+.brand { display: flex; align-items: center; gap: 12px; }
+
+.logo { width: 40px; height: 40px; flex: none; }
+.logo rect { fill: var(--brand); }
+.logo path { stroke: #fff; stroke-width: 2.4; stroke-linecap: round; stroke-linejoin: round; opacity: .9; }
+.logo .d1 { fill: #fff; }
+.logo .d2 { fill: var(--accent); }
+.logo .d3 { fill: #fff; }
+.logo .d4 { fill: #fff; }
+
+.brand-text h1 {
+  margin: 0;
+  font-size: 24px;
+  letter-spacing: -0.01em;
+  font-weight: 800;
+  color: var(--brand-dark);
+}
+.brand-text p {
+  margin: 2px 0 0;
+  font-size: 13px;
+  color: var(--ink-soft);
+}
+
+/* ---------- Estatísticas ---------- */
+.stats {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+}
+.stat {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 8px 6px;
+  text-align: center;
+  box-shadow: var(--shadow);
+}
+.stat-label {
+  display: block;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: .06em;
+  color: var(--ink-soft);
+}
+.stat-value {
+  display: block;
+  margin-top: 2px;
+  font-size: 20px;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ---------- Tabuleiro ---------- */
+main { display: flex; flex-direction: column; gap: 14px; }
+
+.board {
+  --gap: 8px;
+  display: grid;
+  grid-template-columns: repeat(5, var(--cell-size));
+  grid-auto-rows: var(--cell-size);
+  gap: var(--gap);
+  justify-content: center;
+  margin: 4px auto 0;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.cell {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 26px;
+  font-weight: 700;
+  border-radius: var(--radius);
+  background: var(--surface);
+  border: 1px solid var(--line);
+  color: var(--ink);
+  box-shadow: var(--shadow);
+  cursor: pointer;
+  transition: transform .06s ease, background-color .12s ease, box-shadow .12s ease;
+  -webkit-tap-highlight-color: transparent;
+}
+.cell.wall {
+  background: var(--wall);
+  border-color: var(--wall);
+  box-shadow: none;
+  cursor: default;
+}
+
+.cell.solved { border-color: transparent; color: var(--ink); }
+.cell.w0 { background: var(--w0); }
+.cell.w1 { background: var(--w1); }
+.cell.w2 { background: var(--w2); }
+.cell.w3 { background: var(--w3); }
+.cell.w4 { background: var(--w4); }
+
+.cell.trace {
+  background: #fff4dc;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px var(--accent) inset;
+  transform: scale(1.04);
+}
+.cell.trace-head {
+  box-shadow: 0 0 0 3px var(--brand) inset;
+  background: #ffe9c2;
+}
+
+.cell.hint {
+  animation: hintPulse 1.1s ease-in-out infinite;
+}
+@keyframes hintPulse {
+  0%, 100% { box-shadow: 0 0 0 2px var(--accent) inset, var(--shadow); }
+  50%      { box-shadow: 0 0 0 6px rgba(242, 177, 52, .45) inset, var(--shadow); }
+}
+
+.board.done .cell:not(.wall) { animation: pop .4s ease; }
+@keyframes pop {
+  0% { transform: scale(1); }
+  40% { transform: scale(1.08); }
+  100% { transform: scale(1); }
+}
+
+/* ---------- Palavras para encontrar ---------- */
+.wordbank {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+.wordbank-title {
+  margin: 0;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: .06em;
+  color: var(--ink-soft);
+}
+.wordbank-rows {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  width: 100%;
+  align-items: center;
+}
+.wb-row {
+  display: flex;
+  gap: 5px;
+  justify-content: center;
+}
+.wb-tile {
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
+  border: 2px dashed var(--line);
+  background: transparent;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 15px;
+  font-weight: 800;
+  color: var(--ink);
+}
+.wb-row.filled .wb-tile {
+  border-style: solid;
+  border-color: transparent;
+  animation: wbPop .28s ease;
+}
+.wb-row.filled.w0 .wb-tile { background: var(--w0); }
+.wb-row.filled.w1 .wb-tile { background: var(--w1); }
+.wb-row.filled.w2 .wb-tile { background: var(--w2); }
+.wb-row.filled.w3 .wb-tile { background: var(--w3); }
+.wb-row.filled.w4 .wb-tile { background: var(--w4); }
+@keyframes wbPop {
+  0% { transform: scale(.7); }
+  60% { transform: scale(1.12); }
+  100% { transform: scale(1); }
+}
+
+/* ---------- Mensagem ---------- */
+.message {
+  margin: 0;
+  min-height: 20px;
+  text-align: center;
+  font-size: 14px;
+  color: var(--ink-soft);
+}
+.message.error { color: var(--brand-dark); font-weight: 600; }
+.message.good  { color: #1f7a4d; font-weight: 600; }
+
+/* ---------- Botões ---------- */
+.controls {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+}
+.btn {
+  font: inherit;
+  font-weight: 700;
+  padding: 12px 10px;
+  border-radius: 12px;
+  border: 1px solid var(--line);
+  background: var(--surface);
+  color: var(--ink);
+  cursor: pointer;
+  box-shadow: var(--shadow);
+  -webkit-tap-highlight-color: transparent;
+  transition: transform .06s ease, background-color .12s ease;
+}
+.btn:active { transform: translateY(1px); }
+.btn:disabled { opacity: .45; cursor: default; box-shadow: none; }
+.btn-primary {
+  background: var(--brand);
+  border-color: var(--brand);
+  color: #fff;
+  width: 100%;
+}
+.btn-primary:active { background: var(--brand-dark); }
+
+/* ---------- Painel de vitória ---------- */
+.win-panel {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  padding: 18px 16px;
+  text-align: center;
+  box-shadow: var(--shadow);
+}
+.win-panel[hidden] { display: none; }
+.win-panel h2 { margin: 0 0 6px; font-size: 20px; color: var(--brand-dark); }
+.win-panel p { margin: 0 0 12px; font-size: 14px; color: var(--ink-soft); }
+.share-feedback { min-height: 16px; font-size: 13px; color: #1f7a4d; margin: 8px 0 0; }
+.share-text {
+  width: 100%;
+  margin-top: 10px;
+  padding: 10px;
+  font: inherit;
+  font-size: 13px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  resize: none;
+  height: 96px;
+  background: var(--bg);
+  color: var(--ink);
+}
+.share-text[hidden] { display: none; }
+
+/* ---------- Como jogar ---------- */
+.howto {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  padding: 14px 16px;
+  box-shadow: var(--shadow);
+}
+.howto h3 { margin: 0 0 8px; font-size: 15px; }
+.howto ul { margin: 0; padding-left: 18px; }
+.howto li { font-size: 13px; color: var(--ink-soft); margin: 5px 0; line-height: 1.45; }
+.howto .credits { margin: 10px 0 0; font-size: 11px; color: var(--ink-soft); opacity: .8; }
+
+/* ---------- Telas bem estreitas ---------- */
+@media (max-width: 360px) {
+  :root { --cell-size: 54px; }
+  .cell { font-size: 23px; }
+  .brand-text h1 { font-size: 21px; }
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #17140f;
+    --surface: #221e18;
+    --ink: #f1e8db;
+    --ink-soft: #a99e8c;
+    --line: #3a3327;
+    --brand: #d76f52;
+    --brand-dark: #e79274;
+    --accent: #f2b134;
+    --wall: #0d0b08;
+    --shadow: 0 1px 2px rgba(0,0,0,.4);
+    --w0: #7a6544;
+    --w1: #4f6f5c;
+    --w2: #7d5453;
+    --w3: #5a5678;
+    --w4: #45696d;
+  }
+  .cell.trace { background: #3a3018; }
+  .cell.trace-head { background: #47391c; }
+  .win-panel p, .howto li { color: var(--ink-soft); }
+}

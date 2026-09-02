@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1, user-scalable=no">
+<meta name="theme-color" content="#a8432e">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Palavrilha">
+<title>Palavrilha</title>
+<!-- Todos os caminhos são relativos para funcionar servido de uma subpasta
+     (ex.: usuario.github.io/palavrilha/). -->
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="favicon.svg">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<div class="app">
+
+  <header class="topbar">
+    <div class="brand">
+      <svg class="logo" viewBox="0 0 40 40" aria-hidden="true">
+        <rect x="2.5" y="2.5" width="35" height="35" rx="9"/>
+        <circle class="d1" cx="12" cy="12" r="3.4"/>
+        <circle class="d2" cx="20" cy="20" r="3.4"/>
+        <circle class="d3" cx="28" cy="12" r="3.4"/>
+        <circle class="d4" cx="28" cy="28" r="3.4"/>
+        <path d="M12 12 L20 20 L28 28 M20 20 L28 12" fill="none"/>
+      </svg>
+      <div class="brand-text">
+        <h1>Palavrilha</h1>
+        <p id="puzzle-label">Quebra-cabeça de palavras</p>
+      </div>
+    </div>
+  </header>
+
+  <section class="stats" aria-label="Situação do jogo">
+    <div class="stat">
+      <span class="stat-label">Tempo</span>
+      <span class="stat-value" id="timer">00:00</span>
+    </div>
+    <div class="stat">
+      <span class="stat-label">Palavras</span>
+      <span class="stat-value" id="progress">0/5</span>
+    </div>
+    <div class="stat">
+      <span class="stat-label">Sequência</span>
+      <span class="stat-value" id="streak">0</span>
+    </div>
+  </section>
+
+  <main>
+    <div id="board" class="board" role="grid" aria-label="Tabuleiro 5 por 5"></div>
+
+    <section class="wordbank" aria-label="Palavras para encontrar">
+      <p class="wordbank-title">Palavras para encontrar</p>
+      <div id="wordbank" class="wordbank-rows"></div>
+    </section>
+
+    <p id="message" class="message" role="status" aria-live="polite">
+      Toque numa letra e siga pelas células vizinhas para traçar uma palavra.
+    </p>
+
+    <div class="controls">
+      <button type="button" id="btn-hint" class="btn btn-ghost">Dica</button>
+      <button type="button" id="btn-undo" class="btn btn-ghost">Desfazer</button>
+      <button type="button" id="btn-reset" class="btn btn-ghost">Reiniciar</button>
+    </div>
+  </main>
+
+  <section id="win-panel" class="win-panel" hidden>
+    <h2>Parabéns! 🎉</h2>
+    <p id="win-summary">Você resolveu o quebra-cabeça de hoje.</p>
+    <button type="button" id="btn-share" class="btn btn-primary">Compartilhar</button>
+    <p id="share-feedback" class="share-feedback" aria-live="polite"></p>
+    <textarea id="share-text" class="share-text" readonly hidden></textarea>
+  </section>
+
+  <footer class="howto">
+    <h3>Como jogar</h3>
+    <ul>
+      <li>Há <strong>5 palavras</strong> escondidas nas células livres.</li>
+      <li>Cada célula livre pertence a <strong>uma única</strong> palavra.</li>
+      <li>Trace ligando células <strong>vizinhas</strong> (cima, baixo, esquerda, direita). As palavras podem virar esquinas.</li>
+      <li>As células escuras são <strong>paredes</strong> e não entram em nenhuma palavra.</li>
+      <li><strong>Desfazer</strong> remove a última palavra. <strong>Reiniciar</strong> limpa o tabuleiro. <strong>Dica</strong> destaca o início de uma palavra.</li>
+    </ul>
+    <p class="credits">Um novo quebra-cabeça por dia. Inspirado em jogos de palavras em grade — marca, cores e nome próprios.</p>
+  </footer>
+
+</div>
+
+<script src="puzzles.js"></script>
+<script src="game.js"></script>
+</body>
+</html>
