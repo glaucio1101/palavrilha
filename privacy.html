@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#a8432e">
+<meta name="robots" content="index, follow">
+<title>Política de Privacidade — Palavrilha</title>
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<style>
+  :root {
+    --bg: #faf6ef; --surface: #fff; --ink: #26221d; --ink-soft: #6b6154;
+    --line: #e7ddce; --brand: #a8432e; --brand-dark: #7c2d16;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #17140f; --surface: #221e18; --ink: #f1e8db; --ink-soft: #a99e8c;
+      --line: #3a3327; --brand: #d76f52; --brand-dark: #e79274;
+    }
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; background: var(--bg); color: var(--ink);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    -webkit-text-size-adjust: 100%; line-height: 1.55; }
+  .wrap { max-width: 720px; margin: 0 auto; padding: 24px 18px 64px;
+    padding-top: calc(24px + env(safe-area-inset-top)); }
+  a { color: var(--brand-dark); }
+  .back { display: inline-block; font-weight: 700; text-decoration: none; margin-bottom: 18px; }
+  h1 { font-size: 24px; color: var(--brand-dark); margin: 0 0 4px; }
+  h2 { font-size: 17px; margin: 28px 0 8px; }
+  .meta { color: var(--ink-soft); font-size: 13px; margin: 0 0 8px; }
+  p, li { font-size: 14px; }
+  ul { padding-left: 20px; }
+  .card { background: var(--surface); border: 1px solid var(--line); border-radius: 14px;
+    padding: 4px 18px 18px; margin-top: 16px; }
+  code { background: var(--surface); border: 1px solid var(--line); border-radius: 5px;
+    padding: 1px 5px; font-size: 13px; }
+  .tag { display: inline-block; font-size: 11px; font-weight: 700; text-transform: uppercase;
+    letter-spacing: .04em; padding: 2px 7px; border-radius: 6px; border: 1px solid var(--line);
+    color: var(--ink-soft); vertical-align: middle; margin-left: 6px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <a class="back" href="index.html">← Voltar ao jogo</a>
+
+  <h1>Política de Privacidade do Palavrilha</h1>
+  <p class="meta">Última atualização: 2 de setembro de 2026 · Vigência a partir desta data.</p>
+
+  <p>Esta política explica quais dados o <strong>Palavrilha</strong> trata quando você
+  usa o site (<code>palavrilha.com.br</code>) ou o aplicativo para iPhone, e quais são
+  os seus direitos segundo a <strong>Lei Geral de Proteção de Dados</strong> (Lei
+  nº 13.709/2018 — LGPD). Alguns itens abaixo estão marcados como
+  <span class="tag">planejado</span>: descrevem tratamentos que passam a valer quando os
+  recursos correspondentes (contas, placares e anúncios) forem lançados.</p>
+
+  <div class="card">
+    <h2>1. Quem é o controlador</h2>
+    <p>O Palavrilha é mantido por Glaucio (desenvolvedor independente). Para qualquer
+    assunto de privacidade, incluindo o exercício dos seus direitos, use o contato da
+    seção 12. As funções de Encarregado (DPO) são exercidas por essa mesma pessoa.</p>
+
+    <h2>2. Que dados tratamos</h2>
+
+    <h2 style="font-size:15px;">2.1 Hoje, no site e no jogo</h2>
+    <ul>
+      <li><strong>Progresso do jogo</strong>: número do quebra-cabeça do dia, palavras
+      já encontradas, dicas usadas, tempo e sequência (streak). Fica gravado apenas no
+      <strong>armazenamento local do seu navegador</strong> (<code>localStorage</code>),
+      no seu aparelho. Não é enviado a nenhum servidor e não identifica você.</li>
+      <li>Não usamos cookies de rastreamento, nem pixels de terceiros, nem análise de
+      audiência no site.</li>
+    </ul>
+
+    <h2 style="font-size:15px;">2.2 Ao criar uma conta <span class="tag">planejado</span></h2>
+    <p>O login é opcional. Você pode jogar sem conta. Se você criar uma:</p>
+    <ul>
+      <li><strong>Conta anônima</strong> (padrão): um identificador aleatório gerado
+      pelo <strong>Firebase Authentication</strong> (Google), usado só para sincronizar
+      seu progresso entre aparelhos. Não contém nome nem e-mail.</li>
+      <li><strong>Entrar com Apple ou Google</strong> (opcional): recebemos um
+      identificador da conta e, conforme sua escolha no provedor, um <strong>nome de
+      exibição</strong> e um <strong>e-mail</strong> (que pode ser um e-mail privado de
+      redirecionamento da Apple). Usados para identificar você nos placares e para
+      adicionar amigos.</li>
+      <li><strong>Lista de amigos</strong>: os identificadores das contas que você
+      adiciona (por código ou link) e que aceitam.</li>
+      <li><strong>Resultados do desafio diário</strong>: tempo de conclusão e sequência,
+      associados ao seu identificador, para montar o <strong>placar global</strong>
+      (opcional) e o <strong>placar de amigos</strong>.</li>
+    </ul>
+    <p>Esses dados são guardados no <strong>Firebase / Cloud Firestore</strong> (Google).</p>
+
+    <h2 style="font-size:15px;">2.3 No aplicativo para iPhone <span class="tag">planejado</span></h2>
+    <ul>
+      <li><strong>Anúncios (Google AdMob)</strong>: para exibir um banner, o SDK do
+      Google Mobile Ads pode tratar o <strong>identificador de publicidade do
+      dispositivo</strong>, endereço IP aproximado e dados do aparelho. Se você não
+      consentir com anúncios personalizados, são exibidos anúncios
+      <strong>não personalizados</strong>. Veja a seção 6.</li>
+      <li><strong>Compra "sem anúncios" (US$ 1,99)</strong>: a transação é processada
+      pela <strong>Apple (App Store / StoreKit)</strong>. Recebemos da Apple apenas a
+      confirmação de que a compra existe e é válida (não recebemos dados do seu cartão).
+      Guardamos um indicador de que a sua conta comprou a remoção de anúncios.</li>
+      <li><strong>Diagnóstico</strong>: relatórios de falha e métricas básicas de
+      estabilidade, quando você os autoriza no iOS.</li>
+    </ul>
+
+    <h2>3. Para que usamos e com que base legal</h2>
+    <ul>
+      <li><strong>Fazer o jogo funcionar e guardar o progresso no aparelho</strong> —
+      execução de contrato / legítimo interesse (LGPD, art. 7º, V e IX).</li>
+      <li><strong>Sincronizar progresso e manter sua conta</strong>
+      <span class="tag">planejado</span> — execução de contrato (art. 7º, V).</li>
+      <li><strong>Placar global e placar de amigos</strong>
+      <span class="tag">planejado</span> — consentimento ao ativar o recurso; você pode
+      sair dos placares a qualquer momento (art. 7º, I).</li>
+      <li><strong>Anúncios personalizados</strong> <span class="tag">planejado</span> —
+      consentimento, coletado antes do primeiro anúncio (art. 7º, I). Anúncios não
+      personalizados dependem de legítimo interesse para manter o app gratuito.</li>
+      <li><strong>Concluir e validar a compra "sem anúncios"</strong>
+      <span class="tag">planejado</span> — execução de contrato (art. 7º, V).</li>
+      <li><strong>Segurança, prevenção a fraude e cumprimento de obrigações legais</strong>
+      — art. 7º, II e VI.</li>
+    </ul>
+
+    <h2>4. Compartilhamento com terceiros</h2>
+    <p>Não vendemos seus dados. Eles são tratados por prestadores que agem por nossa
+    conta ou por exigência da plataforma:</p>
+    <ul>
+      <li><strong>Google</strong> — Firebase (autenticação e banco de dados) e AdMob
+      (anúncios). <a href="https://policies.google.com/privacy" target="_blank" rel="noopener">Política do Google</a>.</li>
+      <li><strong>Apple</strong> — login com Apple e processamento das compras.
+      <a href="https://www.apple.com/legal/privacy/" target="_blank" rel="noopener">Política da Apple</a>.</li>
+      <li><strong>GitHub Pages</strong> — hospedagem do site (registros de acesso do
+      servidor). <a href="https://docs.github.com/site-policy/privacy-policies/github-general-privacy-statement" target="_blank" rel="noopener">Política do GitHub</a>.</li>
+    </ul>
+    <p>Esses serviços podem tratar dados <strong>fora do Brasil</strong> (por exemplo,
+    Estados Unidos). A transferência internacional se apoia nas cláusulas e salvaguardas
+    desses provedores, conforme os arts. 33 a 36 da LGPD.</p>
+
+    <h2>5. Armazenamento local (site)</h2>
+    <p>Usamos <code>localStorage</code> apenas para guardar seu progresso, seu tempo e
+    sua sequência, e uma preferência ou outra de interface. Não são cookies e não
+    servem para rastrear você entre sites. Você pode apagar tudo pelo botão
+    <strong>Reiniciar</strong> do jogo ou limpando os dados do site no navegador.</p>
+
+    <h2>6. Anúncios e consentimento <span class="tag">planejado</span></h2>
+    <ul>
+      <li>No primeiro uso do app com anúncios, aparece um pedido de consentimento
+      (plataforma de mensagens do Google / UMP) e, no iOS, o aviso de
+      <strong>Transparência de Rastreamento de Apps (ATT)</strong>.</li>
+      <li>Se você recusar, os anúncios passam a ser <strong>não personalizados</strong>.</li>
+      <li>Você pode <strong>remover todos os anúncios</strong> com a compra única de
+      US$ 1,99. Há um botão <strong>Restaurar compras</strong> para reativar a remoção
+      em outro aparelho com o mesmo ID Apple.</li>
+      <li>Pode rever a decisão de consentimento a qualquer momento nas configurações do
+      app.</li>
+    </ul>
+
+    <h2>7. Seus direitos (LGPD, art. 18)</h2>
+    <p>Você pode pedir: confirmação de tratamento; acesso aos dados; correção;
+    anonimização, bloqueio ou eliminação de dados desnecessários; portabilidade;
+    informação sobre com quem compartilhamos; e revogação do consentimento.</p>
+    <ul>
+      <li><strong>Progresso local</strong>: sob seu controle direto no aparelho
+      (botão Reiniciar / limpar dados do navegador).</li>
+      <li><strong>Conta e dados na nuvem</strong> <span class="tag">planejado</span>: o
+      app terá <strong>"Excluir minha conta"</strong>, que apaga sua conta, seu
+      progresso sincronizado, sua lista de amigos e suas entradas nos placares. Você
+      também pode pedir por e-mail (seção 12); respondemos em até 15 dias.</li>
+    </ul>
+
+    <h2>8. Retenção</h2>
+    <ul>
+      <li>Progresso local: fica até você apagar.</li>
+      <li>Dados de conta e placares <span class="tag">planejado</span>: enquanto a conta
+      existir. Após a exclusão, são removidos em até 30 dias, salvo o mínimo necessário
+      para segurança ou obrigação legal.</li>
+      <li>Registros de acesso do servidor de hospedagem: pelo prazo do provedor.</li>
+    </ul>
+
+    <h2>9. Crianças e adolescentes</h2>
+    <p>O Palavrilha é de uso geral e não é direcionado a crianças. Não coletamos
+    intencionalmente dados de menores de 13 anos. Recursos de conta e placares serão
+    voltados a maiores de 13 anos; abaixo dessa idade, é necessário consentimento de um
+    dos pais ou responsável.</p>
+
+    <h2>10. Segurança</h2>
+    <p>Usamos conexões cifradas (HTTPS) e os controles de acesso do Firebase (regras de
+    segurança por usuário). Nenhum sistema é 100% seguro, mas trabalhamos para reduzir
+    riscos de acesso indevido, perda ou alteração dos dados.</p>
+
+    <h2>11. Mudanças nesta política</h2>
+    <p>Podemos atualizar este texto. Mudanças relevantes serão sinalizadas no app ou no
+    site, com nova data de "última atualização". O uso após a mudança significa ciência
+    da versão vigente.</p>
+
+    <h2>12. Contato e Encarregado (DPO)</h2>
+    <p>Dúvidas ou pedidos sobre privacidade e dados pessoais:
+    <a href="mailto:contato@palavrilha.com.br">contato@palavrilha.com.br</a>.</p>
+  </div>
+
+  <p class="meta" style="margin-top:20px;">Palavrilha é um projeto independente. Não é
+  afiliado ao LinkedIn, ao Google ou à Apple; nomes e marcas citados pertencem aos
+  respectivos donos.</p>
+</div>
+</body>
+</html>

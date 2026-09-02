@@ -315,6 +315,8 @@ main { display: flex; flex-direction: column; gap: 14px; }
 .howto ul { margin: 0; padding-left: 18px; }
 .howto li { font-size: 13px; color: var(--ink-soft); margin: 5px 0; line-height: 1.45; }
 .howto .credits { margin: 10px 0 0; font-size: 11px; color: var(--ink-soft); opacity: .8; }
+.howto .legal { margin: 6px 0 0; font-size: 12px; }
+.howto .legal a { color: var(--brand-dark); font-weight: 600; }
 
 /* ---------- Telas bem estreitas ---------- */
 @media (max-width: 360px) {
