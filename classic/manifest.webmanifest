@@ -1,0 +1,15 @@
+{
+  "name": "Palavrilha",
+  "short_name": "Palavrilha",
+  "description": "Jogo diário de caça-palavras em português do Brasil.",
+  "lang": "pt-BR",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#faf6ef",
+  "theme_color": "#a8432e",
+  "icons": [
+    { "src": "./favicon.svg", "type": "image/svg+xml", "sizes": "any", "purpose": "any maskable" }
+  ]
+}

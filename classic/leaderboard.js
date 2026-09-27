@@ -1,20 +1,8 @@
-/* Palavrilha 2.0 — placar global e de amigos (opcional, via Firebase).
+/* Palavrilha — placar global e de amigos (opcional, via Firebase).
  *
- * Diferença do leaderboard.js da versão clássica (classic/leaderboard.js):
- * identidade é o seu E-MAIL (sem senha, sem verificação) em vez de um
- * apelido + código sorteado. Convidar um amigo = digitar o e-mail dele.
- *
- * Coleções próprias (v2_*), independentes das da versão clássica, mesmo que
- * as duas usem o mesmo projeto Firebase:
- *   v2_users/{uid}        privado (só o dono lê) — email, displayName, streak
- *   v2_public/{uid}        público (qualquer logado lê) — displayName, streak
- *   v2_emailIndex/{email}  só permite busca por chave exata (uid do dono)
- *   v2_scores/{dia}/entries/{uid}  público — nunca contém e-mail
- *
- * O nome mostrado nos placares é a parte antes do "@" do e-mail (não o
- * e-mail inteiro), para não expor endereços completos publicamente.
- *
- * Sem firebase-config.js preenchido, nada disso roda: o jogo segue offline. */
+ * Sem dependência de build. Se firebase-config.js estiver vazio, este arquivo
+ * não faz nada e NÃO baixa nada da rede — o jogo segue igual. Só quando há
+ * configuração é que o SDK "compat" do Firebase é carregado sob demanda. */
 
 (function () {
   'use strict';
@@ -24,7 +12,7 @@
   if (!lb) return;
 
   var configured = CFG && CFG.apiKey && CFG.projectId && CFG.appId && CFG.authDomain;
-  if (!configured) { lb.hidden = true; return; }
+  if (!configured) { lb.hidden = true; return; }   // placar desligado
 
   var SDK = '10.14.1';
   var BASE = 'https://www.gstatic.com/firebasejs/' + SDK + '/';
@@ -43,25 +31,28 @@
     .then(function () { return loadScript(BASE + 'firebase-auth-compat.js'); })
     .then(function () { return loadScript(BASE + 'firebase-firestore-compat.js'); })
     .then(start)
-    .catch(function () { lb.hidden = true; });
+    .catch(function () { lb.hidden = true; });   // offline / CDN bloqueado
 
   // ==========================================================================
   function start() {
     if (typeof firebase === 'undefined' || !firebase.initializeApp) { lb.hidden = true; return; }
 
+    // ---------- elementos ----------
     var bodyEl = document.getElementById('lb-body');
     var tabsEl = document.getElementById('lb-tabs');
     var msgEl = document.getElementById('lb-msg');
     var tabButtons = [].slice.call(document.querySelectorAll('.lb-tab'));
 
+    // ---------- estado ----------
     var db, auth;
-    var me = null;            // { uid, email, displayName }
+    var me = null;            // { uid, name, code }
     var currentDay = null;    // { dayIndex, puzzleId }
     var pendingScore = null;
     var activeTab = 'global';
     var busy = false;
 
-    var EMAIL_RE = /^[^\s@]{1,64}@[^\s@]{1,190}\.[^\s@]{2,24}$/;
+    var CODE_ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+    var NAME_RE = /^[0-9A-Za-zÀ-ÿ][0-9A-Za-zÀ-ÿ ._'-]{1,15}$/;
 
     try {
       firebase.initializeApp({
@@ -90,14 +81,15 @@
       trySubmit();
     });
 
+    // estado que o jogo já tenha emitido antes deste script terminar
     var boot = window.__PALAVRILHA__ || {};
     if (boot.day) currentDay = boot.day;
     if (boot.solved) pendingScore = boot.solved;
 
     auth.onAuthStateChanged(function (user) {
       if (!user) { me = null; renderJoin(); return; }
-      loadPrivateProfile(user.uid).then(function (prof) {
-        if (!prof || !prof.email) { renderJoin(user); return; }
+      loadProfile(user.uid).then(function (prof) {
+        if (!prof || !prof.name) { renderJoin(user); return; }
         me = prof;
         tabsEl.hidden = false;
         trySubmit();
@@ -106,59 +98,61 @@
     });
 
     // ---------- perfil ----------
-    function loadPrivateProfile(uid) {
-      return db.collection('v2_users').doc(uid).get().then(function (s) {
+    function loadProfile(uid) {
+      return db.collection('users').doc(uid).get().then(function (s) {
         return s.exists ? assign({ uid: uid }, s.data()) : null;
       });
     }
 
-    function emailIndexRef(email) { return db.collection('v2_emailIndex').doc(email); }
+    function genCode() {
+      var c = '';
+      for (var i = 0; i < 5; i++) c += CODE_ALPHABET[Math.floor(Math.random() * CODE_ALPHABET.length)];
+      return c;
+    }
 
-    function claimEmail(uid, email, force) {
-      return emailIndexRef(email).get().then(function (idxSnap) {
-        if (idxSnap.exists && idxSnap.data().uid !== uid && !force) {
-          return { conflict: true };
-        }
-        var displayName = email.split('@')[0].slice(0, 40);
-        return db.collection('v2_users').doc(uid).get().then(function (profSnap) {
-          var now = firebase.firestore.FieldValue.serverTimestamp();
-          var priv = profSnap.exists
-            ? assign({}, profSnap.data(), { email: email, displayName: displayName, updatedAt: now })
-            : { email: email, displayName: displayName, streak: 0, provider: 'anonymous', createdAt: now, updatedAt: now };
-          var pub = { displayName: displayName, streak: priv.streak || 0, updatedAt: now };
-          var batch = db.batch();
-          batch.set(db.collection('v2_users').doc(uid), priv, { merge: true });
-          batch.set(db.collection('v2_public').doc(uid), pub, { merge: true });
-          batch.set(emailIndexRef(email), { uid: uid }, { merge: true });
-          return batch.commit().then(function () { return { conflict: false, profile: assign({ uid: uid }, priv) }; });
+    function uniqueCode(tries) {
+      var code = genCode();
+      return db.collection('users').where('code', '==', code).limit(1).get().then(function (snap) {
+        if (snap.empty) return code;
+        if (tries <= 0) return code + genCode()[0];
+        return uniqueCode(tries - 1);
+      });
+    }
+
+    function createProfile(uid, name, provider) {
+      return uniqueCode(8).then(function (code) {
+        var data = {
+          name: name, code: code, provider: provider || 'anonymous', streak: 0,
+          createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+          updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+        };
+        return db.collection('users').doc(uid).set(data, { merge: true }).then(function () {
+          return assign({ uid: uid }, data);
         });
       });
     }
 
     // ---------- envio de pontuação ----------
     function trySubmit() {
-      if (!me || !me.email || !currentDay || !pendingScore || busy) return;
+      if (!me || !me.name || !currentDay || !pendingScore || busy) return;
       var s = pendingScore;
       if (s.dayIndex !== currentDay.dayIndex) return;
       busy = true;
-      var now = firebase.firestore.FieldValue.serverTimestamp();
-      var scoreRef = db.collection('v2_scores').doc(String(currentDay.dayIndex)).collection('entries').doc(me.uid);
-      var streak = s.streak | 0;
-      var batch = db.batch();
-      batch.set(scoreRef, {
-        uid: me.uid, displayName: me.displayName,
+      var ref = db.collection('scores').doc(String(currentDay.dayIndex))
+        .collection('entries').doc(me.uid);
+      ref.set({
+        uid: me.uid, name: me.name,
         timeMs: Math.max(1000, Math.round(s.timeMs || 0)),
         hints: Math.max(0, Math.min(5, s.hints | 0)),
-        streak: streak,
+        streak: s.streak | 0,
         puzzleId: s.puzzleId | 0,
-        wordCount: s.wordCount | 0,
-        solvedAt: now
-      }, { merge: true });
-      batch.set(db.collection('v2_users').doc(me.uid), { streak: streak, updatedAt: now }, { merge: true });
-      batch.set(db.collection('v2_public').doc(me.uid), { displayName: me.displayName, streak: streak, updatedAt: now }, { merge: true });
-      batch.commit().then(function () {
+        solvedAt: firebase.firestore.FieldValue.serverTimestamp()
+      }, { merge: true }).then(function () {
         pendingScore = null;
-        me.streak = streak;
+        db.collection('users').doc(me.uid).set(
+          { streak: s.streak | 0, updatedAt: firebase.firestore.FieldValue.serverTimestamp() },
+          { merge: true }
+        ).catch(function () {});
         busy = false;
         refresh();
       }).catch(function (err) { busy = false; setMsg(errText(err)); });
@@ -183,7 +177,7 @@
     // ---------- leituras ----------
     function loadGlobal() {
       if (!currentDay) { listInto('<p class="lb-empty">Ainda não há desafio de hoje carregado.</p>'); return; }
-      var col = db.collection('v2_scores').doc(String(currentDay.dayIndex)).collection('entries');
+      var col = db.collection('scores').doc(String(currentDay.dayIndex)).collection('entries');
       col.orderBy('timeMs', 'asc').limit(100).get().then(function (snap) {
         var rows = [];
         snap.forEach(function (d) { rows.push(d.data()); });
@@ -192,23 +186,23 @@
     }
 
     function loadFriends() {
-      db.collection('v2_users').doc(me.uid).collection('friends').get().then(function (fs) {
+      db.collection('users').doc(me.uid).collection('friends').get().then(function (fs) {
         var uids = [me.uid];
         fs.forEach(function (d) { if (d.id !== me.uid) uids.push(d.id); });
-        var dayRef = db.collection('v2_scores').doc(String(currentDay ? currentDay.dayIndex : 0)).collection('entries');
+        var dayRef = db.collection('scores').doc(String(currentDay ? currentDay.dayIndex : 0)).collection('entries');
         var gets = uids.map(function (uid) {
           return Promise.all([
             dayRef.doc(uid).get(),
-            db.collection('v2_public').doc(uid).get()
+            db.collection('users').doc(uid).get()
           ]).then(function (r) {
             var score = r[0].exists ? r[0].data() : null;
-            var pub = r[1].exists ? r[1].data() : {};
+            var prof = r[1].exists ? r[1].data() : {};
             return {
               uid: uid,
-              displayName: (score && score.displayName) || pub.displayName || '—',
+              name: (score && score.name) || prof.name || '—',
               timeMs: score ? score.timeMs : null,
               hints: score ? score.hints : null,
-              streak: (score && score.streak != null) ? score.streak : (pub.streak || 0),
+              streak: (score && score.streak != null) ? score.streak : (prof.streak || 0),
               played: !!score
             };
           });
@@ -217,53 +211,57 @@
       }).then(function (rows) {
         rows.sort(function (a, b) {
           if (a.played && b.played) return a.timeMs - b.timeMs;
-          return a.played ? -1 : (b.played ? 1 : a.displayName.localeCompare(b.displayName));
+          return a.played ? -1 : (b.played ? 1 : a.name.localeCompare(b.name));
         });
         renderList(rows, { friends: true });
       }).catch(function (err) { listInto('<p class="lb-empty">' + errText(err) + '</p>'); });
     }
 
     // ---------- render ----------
-    function renderJoin() {
+    function renderJoin(user) {
       tabsEl.hidden = true;
+      var suggested = (user && user.displayName) ? esc(user.displayName) : '';
+      var googleBtn = CFG.google
+        ? '<button type="button" id="lb-google" class="btn btn-ghost lb-wide">Entrar com Google</button>'
+        : '';
       bodyEl.innerHTML =
-        '<p class="lb-intro">Registre seu e-mail para aparecer no placar global e convidar amigos. ' +
-        'É opcional — dá para jogar sem entrar. Não pedimos senha; é só um identificador.</p>' +
+        '<p class="lb-intro">Escolha um apelido para aparecer no placar global e no de amigos. ' +
+        'É opcional — dá para jogar sem entrar.</p>' +
         '<div class="lb-join">' +
-          '<input id="lb-email" class="lb-input" type="email" inputmode="email" autocomplete="email" ' +
-          'maxlength="254" placeholder="seu@email.com">' +
+          '<input id="lb-name" class="lb-input" type="text" inputmode="text" autocomplete="nickname" ' +
+          'maxlength="16" placeholder="Seu apelido" value="' + suggested + '">' +
           '<button type="button" id="lb-enter" class="btn btn-primary lb-wide">Entrar</button>' +
+          googleBtn +
         '</div>';
-      var emailInput = document.getElementById('lb-email');
-      document.getElementById('lb-enter').addEventListener('click', function () { doJoin(emailInput.value, false); });
-      emailInput.addEventListener('keydown', function (e) { if (e.key === 'Enter') doJoin(emailInput.value, false); });
+      var nameInput = document.getElementById('lb-name');
+      document.getElementById('lb-enter').addEventListener('click', function () { doJoin(nameInput.value); });
+      nameInput.addEventListener('keydown', function (e) { if (e.key === 'Enter') doJoin(nameInput.value); });
+      if (CFG.google) {
+        document.getElementById('lb-google').addEventListener('click', function () {
+          var prov = new firebase.auth.GoogleAuthProvider();
+          auth.signInWithPopup(prov).catch(function (err) { setMsg(errText(err)); });
+        });
+      }
     }
 
-    function renderEmailConflict(email) {
-      tabsEl.hidden = true;
-      bodyEl.innerHTML =
-        '<p class="lb-intro">O e-mail <strong>' + esc(email) + '</strong> já foi usado no Palavrilha em outro ' +
-        'navegador ou aparelho. Como o login aqui é simples (sem senha), não dá para recuperar aquela conta a ' +
-        'partir daqui.</p>' +
-        '<div class="lb-join">' +
-          '<button type="button" id="lb-force" class="btn btn-ghost lb-wide">Usar este e-mail mesmo assim</button>' +
-          '<button type="button" id="lb-back" class="btn btn-primary lb-wide">Usar outro e-mail</button>' +
-        '</div>';
-      document.getElementById('lb-force').addEventListener('click', function () { doJoin(email, true); });
-      document.getElementById('lb-back').addEventListener('click', function () { renderJoin(); });
-    }
-
-    function doJoin(rawEmail, force) {
-      var email = normalizeEmail(rawEmail);
-      if (!email) { setMsg('Digite um e-mail válido.'); return; }
+    function doJoin(rawName) {
+      var name = normalizeName(rawName);
+      if (!name) { setMsg('Apelido inválido: use de 2 a 16 letras ou números.'); return; }
       setMsg('Entrando…');
-      var signIn = auth.currentUser ? Promise.resolve(auth.currentUser)
+      var p = auth.currentUser
+        ? Promise.resolve(auth.currentUser)
         : auth.signInAnonymously().then(function (c) { return c.user; });
-      signIn.then(function (user) {
-        return claimEmail(user.uid, email, force);
-      }).then(function (result) {
-        if (result.conflict) { setMsg(''); renderEmailConflict(email); return; }
-        me = result.profile;
+      p.then(function (user) {
+        return loadProfile(user.uid).then(function (prof) {
+          if (prof) {
+            return db.collection('users').doc(user.uid).set(
+              { name: name, updatedAt: firebase.firestore.FieldValue.serverTimestamp() }, { merge: true }
+            ).then(function () { return assign(prof, { name: name }); });
+          }
+          return createProfile(user.uid, name, user.isAnonymous ? 'anonymous' : 'google');
+        });
+      }).then(function (prof) {
+        me = prof;
         setMsg('');
         tabsEl.hidden = false;
         trySubmit();
@@ -274,14 +272,14 @@
     function renderShell() {
       bodyEl.innerHTML =
         '<div class="lb-you">' +
-          '<span>Você: <strong>' + esc(me.displayName) + '</strong></span>' +
-          '<span class="lb-code" title="Amigos digitam este e-mail para te adicionar">convite: ' +
-            '<strong>' + esc(me.email) + '</strong></span>' +
+          '<span>Você: <strong>' + esc(me.name) + '</strong></span>' +
+          '<span class="lb-code" title="Compartilhe para amigos te adicionarem">código ' +
+            '<strong>' + esc(me.code) + '</strong></span>' +
         '</div>' +
         (activeTab === 'friends'
           ? '<div class="lb-addfriend">' +
-              '<input id="lb-friend" class="lb-input" type="email" inputmode="email" ' +
-              'placeholder="E-mail do amigo">' +
+              '<input id="lb-friend" class="lb-input" type="text" maxlength="7" autocapitalize="characters" ' +
+              'placeholder="Código do amigo">' +
               '<button type="button" id="lb-add" class="btn btn-ghost">Adicionar</button>' +
             '</div>'
           : '') +
@@ -303,7 +301,7 @@
       opts = opts || {};
       if (!rows.length) {
         listInto('<p class="lb-empty">' +
-          (opts.friends ? 'Convide amigos pelo e-mail para ver os tempos de hoje.'
+          (opts.friends ? 'Adicione amigos pelo código para ver os tempos de hoje.'
                         : 'Ninguém terminou o desafio de hoje ainda. Seja o primeiro!') +
           '</p>');
         return;
@@ -318,7 +316,7 @@
         if (isMe) myShown = true;
         html += '<li class="lb-row' + (isMe ? ' is-me' : '') + '">' +
           '<span class="lb-rank">' + (played ? rank : '·') + '</span>' +
-          '<span class="lb-name">' + esc(r.displayName) + (isMe ? ' <span class="lb-tagme">você</span>' : '') + '</span>' +
+          '<span class="lb-name">' + esc(r.name) + (isMe ? ' <span class="lb-tagme">você</span>' : '') + '</span>' +
           '<span class="lb-meta">' +
             (played ? fmt(r.timeMs) + (r.hints ? ' <span class="lb-h">💡' + r.hints + '</span>' : '')
                     : '<span class="lb-pending">ainda não jogou</span>') +
@@ -330,11 +328,11 @@
       listInto(html);
 
       if (opts.showRankOutside && me && !myShown && currentDay) {
-        var mineRef = db.collection('v2_scores').doc(String(currentDay.dayIndex)).collection('entries').doc(me.uid);
+        var mineRef = db.collection('scores').doc(String(currentDay.dayIndex)).collection('entries').doc(me.uid);
         mineRef.get().then(function (s) {
           if (!s.exists) return;
           var t = s.data().timeMs;
-          return db.collection('v2_scores').doc(String(currentDay.dayIndex)).collection('entries')
+          return db.collection('scores').doc(String(currentDay.dayIndex)).collection('entries')
             .where('timeMs', '<', t).get().then(function (q) {
               var el = document.getElementById('lb-list');
               if (!el) return;
@@ -345,16 +343,17 @@
       }
     }
 
-    function addFriend(rawEmail) {
-      var email = normalizeEmail(rawEmail);
-      if (!email) { setMsg('Digite um e-mail válido.'); return; }
-      if (email === me.email) { setMsg('Esse é o seu próprio e-mail.'); return; }
+    function addFriend(rawCode) {
+      var code = String(rawCode || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
+      if (code.length < 5) { setMsg('Digite o código do amigo (5 caracteres).'); return; }
       setMsg('Procurando…');
-      emailIndexRef(email).get().then(function (snap) {
-        if (!snap.exists) { setMsg('Ninguém com esse e-mail jogou o Palavrilha ainda. Convide essa pessoa a entrar!'); return; }
-        var uid = snap.data().uid;
-        return db.collection('v2_users').doc(me.uid).collection('friends').doc(uid).set({
-          email: email, since: firebase.firestore.FieldValue.serverTimestamp()
+      db.collection('users').where('code', '==', code).limit(1).get().then(function (snap) {
+        if (snap.empty) { setMsg('Código não encontrado.'); return; }
+        var doc = snap.docs[0];
+        if (doc.id === me.uid) { setMsg('Esse é o seu próprio código.'); return; }
+        return db.collection('users').doc(me.uid).collection('friends').doc(doc.id).set({
+          name: doc.data().name || '—',
+          since: firebase.firestore.FieldValue.serverTimestamp()
         }).then(function () {
           setMsg('Amigo adicionado.');
           if (activeTab !== 'friends') setTab('friends'); else refresh();
@@ -363,9 +362,9 @@
     }
 
     // ---------- utilidades ----------
-    function normalizeEmail(s) {
-      s = String(s || '').trim().toLowerCase();
-      if (!EMAIL_RE.test(s)) return null;
+    function normalizeName(s) {
+      s = String(s || '').replace(/\s+/g, ' ').trim();
+      if (s.length < 2 || s.length > 16 || !NAME_RE.test(s)) return null;
       return s;
     }
     function fmt(ms) {
@@ -387,6 +386,7 @@
       var c = err && err.code ? err.code : '';
       if (c === 'permission-denied') return 'Sem permissão (confira as regras do Firestore).';
       if (c === 'unavailable') return 'Sem conexão com o placar agora.';
+      if (c === 'auth/popup-blocked' || c === 'auth/cancelled-popup-request') return 'A janela de login foi bloqueada.';
       if (c === 'auth/network-request-failed') return 'Falha de rede ao entrar.';
       return (err && err.message) ? err.message : 'Erro ao falar com o placar.';
     }

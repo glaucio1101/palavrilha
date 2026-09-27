@@ -1,8 +1,14 @@
 rules_version = '2';
 
-// Regras de segurança do Firestore para o placar do Palavrilha.
+// Regras de segurança do Firestore para os placares do Palavrilha.
 // Cole em Firebase Console -> Firestore Database -> Rules -> Publish
 // (ou faça deploy com: firebase deploy --only firestore:rules).
+//
+// Este arquivo cobre as DUAS versões, caso usem o mesmo projeto Firebase:
+//   - classic/leaderboard.js  -> coleções "users" / "scores" (apelido + código)
+//   - leaderboard.js (2.0)    -> coleções "v2_users" / "v2_public" /
+//                                "v2_emailIndex" / "v2_scores" (e-mail, sem senha)
+// Não há conflito entre elas: nomes de coleção diferentes.
 
 service cloud.firestore {
   match /databases/{database}/documents {
@@ -50,6 +56,72 @@ service cloud.firestore {
         && request.resource.data.uid == uid
         && request.resource.data.name is string
         && request.resource.data.name.size() <= 16
+        && request.resource.data.timeMs is number
+        && request.resource.data.timeMs >= 1000
+        && request.resource.data.timeMs <= 86400000
+        && request.resource.data.hints is number
+        && request.resource.data.hints >= 0
+        && request.resource.data.hints <= 5
+        && request.resource.data.streak is number
+        && request.resource.data.streak >= 0
+        && request.resource.data.puzzleId is number;
+
+      allow delete: if false;
+    }
+
+    // ================================================================
+    // Palavrilha 2.0 — identidade por e-mail (sem senha, sem verificação)
+    // ================================================================
+
+    // Perfil PRIVADO: contém o e-mail. Só o dono lê e escreve.
+    match /v2_users/{uid} {
+      allow get: if isSelf(uid);
+      allow list: if false;
+
+      allow create, update: if isSelf(uid)
+        && request.resource.data.email is string
+        && request.resource.data.email.size() <= 254
+        && request.resource.data.displayName is string
+        && request.resource.data.displayName.size() <= 40;
+
+      allow delete: if isSelf(uid);
+
+      // Lista de amigos (uid deles), guardada dentro do próprio perfil privado.
+      match /friends/{friendUid} {
+        allow read, write: if isSelf(uid);
+      }
+    }
+
+    // Perfil PÚBLICO: só nome de exibição e sequência — nunca o e-mail.
+    // Qualquer pessoa logada pode ler (necessário para montar os placares).
+    match /v2_public/{uid} {
+      allow get: if signedIn();
+      allow list: if signedIn() && request.query.limit <= 20;
+
+      allow create, update: if isSelf(uid)
+        && request.resource.data.displayName is string
+        && request.resource.data.displayName.size() <= 40;
+
+      allow delete: if isSelf(uid);
+    }
+
+    // Índice de convite: e-mail -> uid. Só permite busca por CHAVE EXATA
+    // (quem convida já digitou o e-mail); não é possível listar todos os
+    // e-mails cadastrados. Cada um só pode apontar o próprio uid.
+    match /v2_emailIndex/{email} {
+      allow get: if signedIn();
+      allow list: if false;
+      allow write: if signedIn() && request.resource.data.uid == request.auth.uid;
+    }
+
+    // Pontuações do desafio diário: nunca contêm e-mail, só displayName.
+    match /v2_scores/{dayIndex}/entries/{uid} {
+      allow read: if signedIn();
+
+      allow create, update: if isSelf(uid)
+        && request.resource.data.uid == uid
+        && request.resource.data.displayName is string
+        && request.resource.data.displayName.size() <= 40
         && request.resource.data.timeMs is number
         && request.resource.data.timeMs >= 1000
         && request.resource.data.timeMs <= 86400000

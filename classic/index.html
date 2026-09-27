@@ -7,7 +7,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="Palavrilha">
-<title>Palavrilha</title>
+<title>Palavrilha Clássico</title>
 <!-- Todos os caminhos são relativos para funcionar servido de uma subpasta
      (ex.: usuario.github.io/palavrilha/). -->
 <link rel="icon" href="favicon.svg" type="image/svg+xml">
@@ -29,7 +29,7 @@
         <path d="M12 12 L20 20 L28 28 M20 20 L28 12" fill="none"/>
       </svg>
       <div class="brand-text">
-        <h1>Palavrilha</h1>
+        <h1>Palavrilha <span class="ver-tag">clássico</span></h1>
         <p id="puzzle-label">Quebra-cabeça de palavras</p>
       </div>
     </div>
@@ -51,7 +51,7 @@
   </section>
 
   <main>
-    <div id="board" class="board" role="grid" aria-label="Tabuleiro do dia"></div>
+    <div id="board" class="board" role="grid" aria-label="Tabuleiro 5 por 5"></div>
 
     <section class="wordbank" aria-label="Palavras para encontrar">
       <p class="wordbank-title">Palavras para encontrar</p>
@@ -67,24 +67,15 @@
       <button type="button" id="btn-undo" class="btn btn-ghost">Desfazer</button>
       <button type="button" id="btn-reset" class="btn btn-ghost">Reiniciar</button>
     </div>
-
-    <div id="result-recap" class="result-recap" hidden>
-      <span id="result-recap-text">Resolvido</span>
-      <button type="button" id="btn-view-result" class="btn btn-primary">Ver resultado</button>
-    </div>
   </main>
 
-  <!-- Popup de resultado: aparece na hora, sem precisar rolar a página. -->
-  <div id="win-modal" class="modal-backdrop" hidden>
-    <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="win-title">
-      <button type="button" id="win-close" class="modal-close" aria-label="Fechar">&times;</button>
-      <h2 id="win-title">Parabéns! 🎉</h2>
-      <p id="win-summary">Você resolveu o quebra-cabeça de hoje.</p>
-      <button type="button" id="btn-share" class="btn btn-primary lb-wide">Compartilhar</button>
-      <p id="share-feedback" class="share-feedback" aria-live="polite"></p>
-      <textarea id="share-text" class="share-text" readonly hidden></textarea>
-    </div>
-  </div>
+  <section id="win-panel" class="win-panel" hidden>
+    <h2>Parabéns! 🎉</h2>
+    <p id="win-summary">Você resolveu o quebra-cabeça de hoje.</p>
+    <button type="button" id="btn-share" class="btn btn-primary">Compartilhar</button>
+    <p id="share-feedback" class="share-feedback" aria-live="polite"></p>
+    <textarea id="share-text" class="share-text" readonly hidden></textarea>
+  </section>
 
   <section id="lb" class="lb" hidden>
     <div class="lb-top">
@@ -101,14 +92,14 @@
   <footer class="howto">
     <h3>Como jogar</h3>
     <ul>
-      <li>Cada dia tem um número diferente de palavras (<strong>4, 5 ou 6</strong>), de <strong>4 a 7 letras</strong>, escondidas nas células livres — o tabuleiro muda de tamanho para caber.</li>
+      <li>Há <strong>5 palavras</strong> escondidas nas células livres.</li>
       <li>Cada célula livre pertence a <strong>uma única</strong> palavra.</li>
       <li>Trace ligando células <strong>vizinhas</strong> (cima, baixo, esquerda, direita). As palavras podem virar esquinas.</li>
       <li>As células escuras são <strong>paredes</strong> e não entram em nenhuma palavra.</li>
       <li><strong>Desfazer</strong> remove a última palavra. <strong>Reiniciar</strong> limpa o tabuleiro. <strong>Dica</strong> destaca o início de uma palavra.</li>
     </ul>
-    <p class="credits">Um novo quebra-cabeça por dia, com um desafio diferente a cada vez. Inspirado em jogos de palavras em grade — marca, cores e nome próprios.</p>
-    <p class="legal"><a href="privacy.html">Política de Privacidade</a> · <a href="classic/index.html">Jogar a versão clássica</a></p>
+    <p class="credits">Um novo quebra-cabeça por dia. Inspirado em jogos de palavras em grade — marca, cores e nome próprios.</p>
+    <p class="legal"><a href="../privacy.html">Política de Privacidade</a> · <a href="../index.html">Jogar a versão nova (2.0)</a></p>
   </footer>
 
 </div>

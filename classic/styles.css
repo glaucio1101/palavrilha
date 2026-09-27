@@ -1,7 +1,4 @@
-/* Palavrilha 2.0 — estilo limpo e minimalista, pensado para tela de celular (390px).
-   Baseado em classic/styles.css. Diferenças: tabuleiro de tamanho variável
-   (--cols/--cell-size/--cell-font ajustados por JS por quebra-cabeça), até 6
-   cores de palavra (w0..w5), e o popup de resultado (.modal-*). */
+/* Palavrilha — estilo limpo e minimalista, pensado para tela de celular (390px). */
 
 :root {
   --bg: #faf6ef;
@@ -16,19 +13,16 @@
 
   --wall: #3a342c;
 
-  --cols: 5;
   --cell-size: 60px;
-  --cell-font: 26px;
   --radius: 14px;
   --shadow: 0 1px 2px rgba(38, 34, 29, .08), 0 6px 18px rgba(38, 34, 29, .06);
 
-  /* cores das palavras (até 6 por quebra-cabeça) */
+  /* cores das 5 palavras */
   --w0: #e7c8a0;
   --w1: #bcd9c8;
   --w2: #f0c2c0;
   --w3: #cbc7e8;
   --w4: #a9d3d8;
-  --w5: #e8d18a;
 }
 
 * { box-sizing: border-box; }
@@ -42,8 +36,6 @@ html, body {
   -webkit-text-size-adjust: 100%;
   -webkit-font-smoothing: antialiased;
 }
-
-html.modal-open, html.modal-open body { overflow: hidden; }
 
 body {
   display: flex;
@@ -87,6 +79,19 @@ body {
   font-size: 13px;
   color: var(--ink-soft);
 }
+.ver-tag {
+  display: inline-block;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .04em;
+  color: var(--ink-soft);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 1px 6px;
+  vertical-align: middle;
+  margin-left: 4px;
+}
 
 /* ---------- Estatísticas ---------- */
 .stats {
@@ -117,13 +122,13 @@ body {
   font-variant-numeric: tabular-nums;
 }
 
-/* ---------- Tabuleiro (tamanho variável por quebra-cabeça) ---------- */
+/* ---------- Tabuleiro ---------- */
 main { display: flex; flex-direction: column; gap: 14px; }
 
 .board {
   --gap: 8px;
   display: grid;
-  grid-template-columns: repeat(var(--cols), var(--cell-size));
+  grid-template-columns: repeat(5, var(--cell-size));
   grid-auto-rows: var(--cell-size);
   gap: var(--gap);
   justify-content: center;
@@ -137,7 +142,7 @@ main { display: flex; flex-direction: column; gap: 14px; }
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: var(--cell-font);
+  font-size: 26px;
   font-weight: 700;
   border-radius: var(--radius);
   background: var(--surface);
@@ -161,7 +166,6 @@ main { display: flex; flex-direction: column; gap: 14px; }
 .cell.w2 { background: var(--w2); }
 .cell.w3 { background: var(--w3); }
 .cell.w4 { background: var(--w4); }
-.cell.w5 { background: var(--w5); }
 
 .cell.trace {
   background: #fff4dc;
@@ -214,18 +218,17 @@ main { display: flex; flex-direction: column; gap: 14px; }
   display: flex;
   gap: 5px;
   justify-content: center;
-  flex-wrap: wrap;
 }
 .wb-tile {
-  width: 28px;
-  height: 28px;
+  width: 30px;
+  height: 30px;
   border-radius: 8px;
   border: 2px dashed var(--line);
   background: transparent;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 14px;
+  font-size: 15px;
   font-weight: 800;
   color: var(--ink);
 }
@@ -239,7 +242,6 @@ main { display: flex; flex-direction: column; gap: 14px; }
 .wb-row.filled.w2 .wb-tile { background: var(--w2); }
 .wb-row.filled.w3 .wb-tile { background: var(--w3); }
 .wb-row.filled.w4 .wb-tile { background: var(--w4); }
-.wb-row.filled.w5 .wb-tile { background: var(--w5); }
 @keyframes wbPop {
   0% { transform: scale(.7); }
   60% { transform: scale(1.12); }
@@ -286,64 +288,18 @@ main { display: flex; flex-direction: column; gap: 14px; }
 }
 .btn-primary:active { background: var(--brand-dark); }
 
-/* ---------- Faixa de resultado (sempre visível, sem rolar) ---------- */
-.result-recap {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 10px;
+/* ---------- Painel de vitória ---------- */
+.win-panel {
   background: var(--surface);
   border: 1px solid var(--line);
-  border-radius: 12px;
-  padding: 10px 10px 10px 14px;
+  border-radius: 16px;
+  padding: 18px 16px;
+  text-align: center;
   box-shadow: var(--shadow);
 }
-.result-recap[hidden] { display: none; }
-.result-recap span { font-size: 13px; font-weight: 700; color: var(--ink-soft); }
-.result-recap .btn { width: auto; padding: 9px 14px; }
-
-/* ---------- Popup de resultado ---------- */
-.modal-backdrop {
-  position: fixed;
-  inset: 0;
-  background: rgba(23, 18, 10, .55);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 20px;
-  z-index: 100;
-}
-.modal-backdrop[hidden] { display: none; }
-.modal-card {
-  position: relative;
-  width: 100%;
-  max-width: 360px;
-  background: var(--surface);
-  border-radius: 18px;
-  padding: 26px 20px 20px;
-  text-align: center;
-  box-shadow: 0 16px 44px rgba(0, 0, 0, .28);
-  animation: modalPop .16s ease;
-}
-@keyframes modalPop {
-  0% { transform: scale(.94); opacity: 0; }
-  100% { transform: scale(1); opacity: 1; }
-}
-.modal-close {
-  position: absolute;
-  top: 8px; right: 8px;
-  width: 32px; height: 32px;
-  border-radius: 50%;
-  border: 0;
-  background: var(--bg);
-  color: var(--ink-soft);
-  font-size: 20px;
-  line-height: 1;
-  cursor: pointer;
-  -webkit-tap-highlight-color: transparent;
-}
-.modal-card h2 { margin: 0 0 6px; font-size: 21px; color: var(--brand-dark); }
-.modal-card > p { margin: 0 0 14px; font-size: 14px; color: var(--ink-soft); }
+.win-panel[hidden] { display: none; }
+.win-panel h2 { margin: 0 0 6px; font-size: 20px; color: var(--brand-dark); }
+.win-panel p { margin: 0 0 12px; font-size: 14px; color: var(--ink-soft); }
 .share-feedback { min-height: 16px; font-size: 13px; color: #1f7a4d; margin: 8px 0 0; }
 .share-text {
   width: 100%;
@@ -402,7 +358,7 @@ main { display: flex; flex-direction: column; gap: 14px; }
   font-size: 13px; color: var(--ink-soft); margin-bottom: 10px;
 }
 .lb-you strong { color: var(--ink); }
-.lb-code strong { letter-spacing: .02em; }
+.lb-code strong { letter-spacing: .08em; }
 
 .lb-list { margin-top: 4px; }
 .lb-ol { list-style: none; margin: 0; padding: 0; }
@@ -447,6 +403,13 @@ main { display: flex; flex-direction: column; gap: 14px; }
 .howto .legal { margin: 6px 0 0; font-size: 12px; }
 .howto .legal a { color: var(--brand-dark); font-weight: 600; }
 
+/* ---------- Telas bem estreitas ---------- */
+@media (max-width: 360px) {
+  :root { --cell-size: 54px; }
+  .cell { font-size: 23px; }
+  .brand-text h1 { font-size: 21px; }
+}
+
 @media (prefers-color-scheme: dark) {
   :root {
     --bg: #17140f;
@@ -464,10 +427,8 @@ main { display: flex; flex-direction: column; gap: 14px; }
     --w2: #7d5453;
     --w3: #5a5678;
     --w4: #45696d;
-    --w5: #7a6a3a;
   }
   .cell.trace { background: #3a3018; }
   .cell.trace-head { background: #47391c; }
-  .howto li { color: var(--ink-soft); }
-  .modal-backdrop { background: rgba(0, 0, 0, .65); }
+  .win-panel p, .howto li { color: var(--ink-soft); }
 }

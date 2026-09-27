@@ -1,123 +1,135 @@
-# Placar global e de amigos
+# Placar global e de amigos (Palavrilha 2.0)
+
+> Esta é a versão **2.0** (e-mail como identificador, sem senha). A versão
+> **clássica** (apelido + código de amigo) tem seu próprio guia em
+> [`classic/LEADERBOARD.md`](classic/LEADERBOARD.md).
 
 O jogo funciona 100% sem isto. O placar é uma camada opcional: quando
-`firebase-config.js` está preenchido, aparece a seção **Placar** abaixo do
-tabuleiro; quando não está (ou quando não há internet), nada disso roda.
+`firebase-config.js` (na raiz) está preenchido, aparece a seção **Placar**
+abaixo do tabuleiro; sem isso (ou sem internet), nada roda e o jogo segue
+100% local.
 
-- **Backend:** Firebase — Authentication (login anônimo) + Cloud Firestore.
-- **Sem build:** o SDK "compat" do Firebase é carregado por `<script>` no
-  `index.html`. Nenhuma ferramenta de build é necessária.
-- **Login:** anônimo por padrão (o jogador só escolhe um apelido). Google é
-  opcional e pode ser ligado depois.
-- **Custo:** o plano gratuito (Spark) cobre com folga um jogo pequeno
-  (50 mil leituras / 20 mil escritas por dia).
+- **Backend:** Firebase — Authentication (login anônimo, por baixo dos panos)
+  + Cloud Firestore.
+- **Identidade:** você digita um **e-mail** para aparecer nos placares e
+  convidar amigos. **Não há senha nem verificação** — é só um identificador,
+  não uma conta de verdade. Ver "Limitações" abaixo.
+- **Convite:** para acompanhar alguém na aba **Amigos**, digite o e-mail que
+  essa pessoa usou para entrar no Palavrilha. Não enviamos e-mail nenhum
+  automaticamente (o site é estático, sem servidor) — combine com a pessoa
+  por WhatsApp, mensagem etc.
+- **Privacidade:** o e-mail nunca aparece nos placares nem é legível por
+  outros jogadores. O que é público é um **nome de exibição** derivado
+  automaticamente (a parte antes do "@"). Ver "Como os dados são organizados".
+- **Sem build:** SDK "compat" do Firebase, carregado por `<script>` só quando
+  configurado. **Custo:** plano gratuito (Spark) cobre um jogo pequeno.
 
 ---
 
 ## 1. Criar o projeto no Firebase
 
-1. Acesse <https://console.firebase.google.com> e **Adicionar projeto**
-   (pode recusar o Google Analytics).
-2. Dentro do projeto, clique no ícone **Web (`</>`)** em "Adicione um app".
-   Dê um apelido (ex.: `palavrilha-web`). **Não** marque "Firebase Hosting".
-3. O console mostra um objeto `firebaseConfig` com `apiKey`, `authDomain`,
-   `projectId`, `appId` etc. Deixe essa tela aberta.
+1. Acesse <https://console.firebase.google.com> e **Adicionar projeto** (pode
+   recusar o Google Analytics). Pode ser o **mesmo projeto** já usado pela
+   versão clássica, ou um novo — tanto faz, as coleções não colidem.
+2. Clique no ícone **Web (`</>`)** em "Adicione um app". Dê um apelido (ex.:
+   `palavrilha-2`). **Não** marque "Firebase Hosting".
+3. Copie o objeto `firebaseConfig` mostrado (`apiKey`, `authDomain`,
+   `projectId`, `appId`).
 
-## 2. Preencher `firebase-config.js`
-
-Copie os valores para o arquivo `firebase-config.js` deste repositório:
+## 2. Preencher `firebase-config.js` (na raiz do projeto)
 
 ```js
 window.PALAVRILHA_FIREBASE = {
   apiKey: 'AIza...',
   authDomain: 'SEU-PROJETO.firebaseapp.com',
   projectId: 'SEU-PROJETO',
-  appId: '1:1234567890:web:abcdef...',
-  google: false
+  appId: '1:1234567890:web:abcdef...'
 };
 ```
 
-Esses valores **não são segredo** — eles vão para todos os navegadores. Quem
+Esses valores **não são segredo** — vão para todos os navegadores. Quem
 protege os dados são as regras do passo 5.
 
 ## 3. Ativar o login anônimo
 
-No console: **Build → Authentication → Get started →** aba **Sign-in method →**
-ative **Anônimo** e salve.
+**Build → Authentication → Get started → Sign-in method → Anônimo → Ativar.**
+(É só o mecanismo por baixo; o jogador nunca vê a palavra "anônimo" — ele só
+digita o e-mail.)
 
 ## 4. Criar o banco Firestore
 
 **Build → Firestore Database → Create database.**
 
-- Modo: **Production mode** (as regras do passo 5 abrem só o necessário).
-- Região: escolha uma perto do Brasil, ex.: **`southamerica-east1` (São Paulo)**.
-  A região não pode ser mudada depois.
+- Modo: **Production mode**.
+- Região: perto do Brasil, ex. **`southamerica-east1` (São Paulo)** — não
+  muda depois. Se a versão clássica já criou o banco no mesmo projeto, é o
+  mesmo banco: não precisa criar de novo.
 
 ## 5. Publicar as regras de segurança
 
 Abra **Firestore Database → aba Rules**, apague o conteúdo e cole o arquivo
-[`firestore.rules`](firestore.rules) deste repositório. Clique **Publish**.
-
-(Se usar a CLI: `npm i -g firebase-tools`, `firebase login`,
-`firebase deploy --only firestore:rules`.)
+[`firestore.rules`](firestore.rules) da raiz do repositório — ele cobre as
+coleções da versão 2.0 (`v2_*`) **e** as da clássica (`users`/`scores`) no
+mesmo arquivo, sem conflito. Clique **Publish**.
 
 ## 6. Publicar o site
 
 ```bash
 cd /Users/glaucio/Projects/Palavilha
 git add firebase-config.js
-git commit -m "Liga o placar (Firebase)"
+git commit -m "Liga o placar do Palavrilha 2.0 (Firebase)"
 git push
 ```
 
-O GitHub Pages republica sozinho. Abra o site, termine o desafio do dia,
-escolha um apelido em **Placar → Entrar** e você aparece no **Global**. Na aba
-**Amigos**, seu **código** de 5 letras fica visível; quem digitar esse código
-na aba Amigos passa a te acompanhar.
-
----
-
-## Opcional: login com Google (mais tarde)
-
-Assim o progresso e os amigos não se perdem se o jogador limpar o navegador.
-Não precisa de conta paga da Apple; é só configuração no Firebase.
-
-1. **Authentication → Sign-in method →** ative **Google**.
-2. **Authentication → Settings → Authorized domains →** adicione
-   `glaucio1101.github.io` (e o domínio próprio, se um dia existir).
-   `localhost` já vem liberado.
-3. Em `firebase-config.js`, mude para `google: true` e faça push.
-
-O botão **Entrar com Google** passa a aparecer na tela de entrada do placar.
+Abra o site, termine o desafio do dia, digite um e-mail em **Placar → Entrar**
+e você aparece no **Global**. Na aba **Amigos**, seu **e-mail** fica visível
+para você mesmo — combine com um amigo para vocês se adicionarem mutuamente
+(cada um digita o e-mail do outro).
 
 ---
 
 ## Como os dados são organizados
 
-| Caminho | Conteúdo |
-|---|---|
-| `users/{uid}` | `name`, `code` (código de amigo), `streak`, `provider`, datas |
-| `users/{uid}/friends/{amigoUid}` | `name`, `since` — lista de quem **eu** acompanho (só eu edito a minha) |
-| `scores/{dayIndex}/entries/{uid}` | `name`, `timeMs`, `hints`, `streak`, `puzzleId`, `solvedAt` |
+| Caminho | Visibilidade | Conteúdo |
+|---|---|---|
+| `v2_users/{uid}` | privado (só o dono lê) | `email`, `displayName`, `streak`, datas |
+| `v2_users/{uid}/friends/{uid do amigo}` | privado | `email` do amigo, `since` |
+| `v2_public/{uid}` | público (qualquer logado) | `displayName`, `streak` — **sem e-mail** |
+| `v2_emailIndex/{email}` | só busca por chave exata | `{ uid }` — não é possível listar todos os e-mails |
+| `v2_scores/{dayIndex}/entries/{uid}` | público | `displayName`, `timeMs`, `hints`, `streak`, `puzzleId` — **sem e-mail** |
 
-`dayIndex` = número de dias desde 01/01/1970 (a mesma chave que escolhe o
-quebra-cabeça do dia), então cada dia tem seu próprio placar e não há
-mistura entre os ciclos de 60 quebra-cabeças.
+O e-mail em si só existe em `v2_users` (privado) e como o próprio nome do
+documento em `v2_emailIndex` (que só é lido por busca exata — alguém só acha
+seu e-mail ali se já souber exatamente qual é, para te convidar). Tudo que é
+publicamente legível (`v2_public`, `v2_scores`) usa `displayName`, a parte do
+e-mail antes do "@" (ex.: `glaucio1101@gmail.com` → `glaucio1101`).
 
-**Consultas usadas** (todas com índice automático, nenhuma composta):
-`scores/{dia}/entries` ordenado por `timeMs`; `users` filtrado por `code`;
-leituras diretas por id para os amigos.
+`dayIndex` = dias desde 01/01/1970 (a mesma chave que escolhe o desafio do
+dia), então cada dia tem seu próprio placar.
 
-## Limitações conhecidas (v1)
+## O que acontece se o mesmo e-mail for usado em dois aparelhos
 
-- O tempo é enviado pelo próprio cliente; as regras só validam faixas
-  (`1s`–`24h`, dicas `0`–`5`). Blindar contra trapaça exigiria Cloud Functions
-  / App Check — fica para depois.
-- "Amigos" é acompanhamento de mão única: você vê quem adicionou, mesmo que a
-  pessoa não tenha adicionado você. Pedido/aceite mútuo fica para uma próxima
-  versão.
-- Sem internet ou abrindo via `file://`, o placar não aparece; o jogo funciona
-  normalmente. O SDK do Firebase só é baixado quando `firebase-config.js` está
-  preenchido — sem configuração, o jogo não faz nenhuma requisição externa.
-- Versão do SDK fixada na constante `SDK` no topo de `leaderboard.js`
-  (`'10.14.1'`). Para atualizar, troque só esse valor.
+Como não há senha, a "conta" é presa ao navegador/aparelho onde você entrou
+(login anônimo por baixo dos panos). Se você digitar o mesmo e-mail em outro
+navegador, o app avisa que aquele e-mail já está em uso e oferece **"Usar
+este e-mail mesmo assim"** — isso só reaponta o índice de convite
+(`v2_emailIndex`) para o novo aparelho; o progresso do aparelho antigo
+continua existindo, mas passa a não ser mais encontrado por esse e-mail.
+Não é possível "recuperar" a conta antiga a partir daqui — essa é a
+limitação de propósito de um login sem senha.
+
+## Limitações conhecidas
+
+- **Sem senha, sem verificação, sem recuperação entre aparelhos** — decisão
+  deliberada para manter o cadastro leve. Se isso incomodar mais adiante, o
+  caminho natural é trocar o login anônimo por e-mail + link mágico do
+  próprio Firebase Authentication (link de verdade, com posse do e-mail
+  confirmada).
+- **Convite é manual**: o site é estático (GitHub Pages), não há servidor
+  para mandar e-mail de convite automaticamente. Combine com a pessoa por
+  fora e cada um digita o e-mail do outro.
+- Tempo enviado pelo próprio cliente; as regras só validam faixas
+  (`1s`–`24h`, dicas `0`–`5`). Blindagem contra trapaça ficaria por conta de
+  Cloud Functions / App Check, fora do escopo desta versão.
+- Sem internet ou via `file://`, o placar não aparece — o jogo segue normal.
+- Versão do SDK fixada na constante `SDK` no topo de `leaderboard.js`.

@@ -1,17 +1,13 @@
-/* Palavrilha 2.0 — lógica do jogo (HTML/CSS/JS puro, sem dependências).
-   Baseado em classic/game.js. Diferenças principais:
-     - Tabuleiro de tamanho VARIÁVEL (linhas x colunas mudam por quebra-cabeça,
-       em vez de sempre 5x5).
-     - Número de palavras VARIÁVEL (4, 5 ou 6, em vez de sempre 5).
-     - Resultado ("Parabéns!") aparece como POPUP (modal), não precisa rolar
-       a página; o compartilhamento fica dentro do popup.
-     - Namespace de armazenamento próprio (palavrilha:v2:), não interfere com
-       o progresso da versão clássica (mesma origem, pasta /classic/). */
+/* Palavrilha — lógica do jogo (HTML/CSS/JS puro, sem dependências).
+   Feito para rodar abrindo index.html no navegador e para ser embutido
+   num WKWebView de app iOS. */
 
 (function () {
   'use strict';
 
-  var NS = 'palavrilha:v2:';
+  var SIZE = 5;
+  var WORD_COUNT = 5;
+  var NS = 'palavrilha:v1:';
   var K_STREAK = NS + 'streak';
   var K_LASTDATE = NS + 'lastDate';
 
@@ -34,9 +30,6 @@
   var puzzle = null;      // objeto do quebra-cabeça de hoje
   var puzzleId = 0;       // 1..60
   var dayIndex = 0;       // dias desde a época (chave estável do desafio diário)
-  var boardRows = 5, boardCols = 5;   // tamanho do tabuleiro DESTE quebra-cabeça
-  var wordCount = 5;                  // nº de palavras DESTE quebra-cabeça
-  var maxWordLen = 6;                 // maior palavra DESTE quebra-cabeça (limite do traçado)
 
   // Eventos para módulos opcionais (ex.: placar). Nunca quebram o jogo.
   // Também guarda o último estado em window para quem assinar depois.
@@ -54,13 +47,11 @@
   var tickTimer = null;
 
   var boardEl, wordbankEl, msgEl, timerEl, progressEl, streakEl, labelEl;
-  var btnHint, btnUndo, btnReset, btnShare;
-  var winModal, winSummary, winClose, shareFeedback, shareTextEl;
-  var recapEl, recapText, btnViewResult;
+  var btnHint, btnUndo, btnReset, btnShare, winPanel, winSummary, shareFeedback, shareTextEl;
 
   // ---------- utilidades de grade ----------
-  function rc(id) { return [Math.floor(id / boardCols), id % boardCols]; }
-  function id(r, c) { return r * boardCols + c; }
+  function rc(id) { return [Math.floor(id / SIZE), id % SIZE]; }
+  function id(r, c) { return r * SIZE + c; }
   function adjacent(a, b) {
     var ra = rc(a), rb = rc(b);
     return Math.abs(ra[0] - rb[0]) + Math.abs(ra[1] - rb[1]) === 1;
@@ -83,7 +74,7 @@
     return sameSequence(seq, ids) || sameSequence(seq, ids.slice().reverse());
   }
   function solvedCellMap() {
-    // cellId -> índice da palavra
+    // cellId -> índice da palavra (0..4)
     var map = {};
     for (var i = 0; i < state.solved.length; i++) {
       var wi = state.solved[i];
@@ -111,7 +102,7 @@
     try {
       var o = JSON.parse(raw);
       return {
-        solved: Array.isArray(o.solved) ? o.solved.slice(0, wordCount) : [],
+        solved: Array.isArray(o.solved) ? o.solved.slice(0, WORD_COUNT) : [],
         hinted: Array.isArray(o.hinted) ? o.hinted : [],
         startTs: typeof o.startTs === 'number' ? o.startTs : null,
         completed: !!o.completed,
@@ -184,13 +175,13 @@
       }
     });
 
-    for (var cid = 0; cid < boardRows * boardCols; cid++) {
+    for (var cid = 0; cid < SIZE * SIZE; cid++) {
       var el = boardEl.children[cid];
       var cls = 'cell';
       if (isWall(cid)) {
         cls += ' wall';
       } else {
-        if (map.hasOwnProperty(cid)) cls += ' solved w' + (map[cid] % 6);
+        if (map.hasOwnProperty(cid)) cls += ' solved w' + map[cid];
         if (pending.indexOf(cid) !== -1) {
           cls += ' trace';
           if (pending[0] === cid) cls += ' trace-head';
@@ -202,13 +193,13 @@
 
     renderWordBank();
 
-    progressEl.textContent = state.solved.length + '/' + wordCount;
+    progressEl.textContent = state.solved.length + '/' + WORD_COUNT;
     timerEl.textContent = fmtTime(elapsedMs());
     streakEl.textContent = String(state.completed ? loadStreak().count : effectiveStreak());
     labelEl.textContent = 'Quebra-cabeça de hoje · Nº ' + puzzleId;
 
     btnUndo.disabled = state.completed || (pending.length === 0 && state.solved.length === 0);
-    btnHint.disabled = state.completed || state.solved.length === wordCount;
+    btnHint.disabled = state.completed || state.solved.length === WORD_COUNT;
     btnReset.disabled = (pending.length === 0 && state.solved.length === 0 && !state.completed && !state.startTs);
   }
 
@@ -218,7 +209,7 @@
       var row = rows[wi];
       var w = puzzle.words[wi];
       var solved = state.solved.indexOf(wi) !== -1;
-      var cls = solved ? ('wb-row filled w' + (wi % 6)) : 'wb-row';
+      var cls = solved ? ('wb-row filled w' + wi) : 'wb-row';
       if (row.className !== cls) row.className = cls;
       var up = solved ? w.word.toUpperCase() : '';
       for (var i = 0; i < row.children.length; i++) {
@@ -251,7 +242,7 @@
 
   function afterExtend() {
     if (tryResolve()) return;
-    if (pending.length >= maxWordLen) {
+    if (pending.length >= 6) {
       say('Esse traçado não forma uma palavra. Volte uma célula ou toque para recomeçar.', 'error');
     } else {
       say('Continue traçando…');
@@ -263,6 +254,7 @@
     if (state.completed) return;
     if (isWall(cellId)) return;
 
+    // sem traçado em andamento
     if (pending.length === 0) {
       if (cellIsSolved(cellId)) { if (!viaDrag) say('Essa letra já pertence a uma palavra.', 'error'); return; }
       pending = [cellId];
@@ -290,6 +282,7 @@
       return;
     }
 
+    // célula distante: recomeçar o traçado ali
     if (!viaDrag && !cellIsSolved(cellId)) {
       pending = [cellId];
       say('Continue traçando…');
@@ -304,14 +297,7 @@
     var word = puzzle.words[wi].word.toUpperCase();
     say('Boa! “' + word + '” encontrada.', 'good');
     render();
-    if (state.solved.length === wordCount) win();
-  }
-
-  function resultSummaryText(streakNow) {
-    var hints = countHintsUsed();
-    return 'Nº ' + puzzleId + ' · tempo ' + fmtTime(state.completedMs) +
-      ' · ' + hints + (hints === 1 ? ' dica' : ' dicas') +
-      ' · sequência ' + streakNow;
+    if (state.solved.length === WORD_COUNT) win();
   }
 
   function win() {
@@ -324,43 +310,31 @@
     boardEl.classList.add('done');
     render();
 
-    showResult(resultSummaryText(streakNow), true);
+    var hints = countHintsUsed();
+    winSummary.textContent =
+      'Nº ' + puzzleId + ' · tempo ' + fmtTime(state.completedMs) +
+      ' · ' + hints + (hints === 1 ? ' dica' : ' dicas') +
+      ' · sequência ' + streakNow;
+    winPanel.hidden = false;
+    shareFeedback.textContent = '';
+    shareTextEl.hidden = true;
     say('Quebra-cabeça completo! 🎉', 'good');
 
     emitGame('palavrilha:solved', solvedDetail());
   }
 
   function countHintsUsed() {
+    // conta apenas dicas de palavras que existiam como não resolvidas
     var uniq = {};
     state.hinted.forEach(function (wi) { uniq[wi] = true; });
     return Object.keys(uniq).length;
-  }
-
-  // ---------- popup de resultado ----------
-  function showResult(summaryText, autoOpen) {
-    winSummary.textContent = summaryText;
-    recapText.textContent = 'Resolvido em ' + fmtTime(state.completedMs);
-    recapEl.hidden = false;
-    shareFeedback.textContent = '';
-    shareTextEl.hidden = true;
-    if (autoOpen) openWinModal();
-  }
-
-  function openWinModal() {
-    winModal.hidden = false;
-    document.documentElement.classList.add('modal-open');
-    winClose.focus();
-  }
-  function closeWinModal() {
-    winModal.hidden = true;
-    document.documentElement.classList.remove('modal-open');
   }
 
   // ---------- botões ----------
   function onHint() {
     if (state.completed) return;
     var unsolved = [];
-    for (var i = 0; i < wordCount; i++) if (state.solved.indexOf(i) === -1) unsolved.push(i);
+    for (var i = 0; i < WORD_COUNT; i++) if (state.solved.indexOf(i) === -1) unsolved.push(i);
     if (!unsolved.length) return;
 
     var target = -1;
@@ -403,8 +377,7 @@
     pending = [];
     if (tickTimer) { window.clearInterval(tickTimer); tickTimer = null; }
     boardEl.classList.remove('done');
-    closeWinModal();
-    recapEl.hidden = true;
+    winPanel.hidden = true;
     say('Tabuleiro reiniciado. Toque numa letra para começar.');
     render();
   }
@@ -454,27 +427,11 @@
     shareFeedback.textContent = ok ? 'Copiado!' : 'Selecione o texto acima e copie.';
   }
 
-  // ---------- tamanho do tabuleiro (varia por quebra-cabeça) ----------
-  function applyBoardSizing() {
-    var gap = 8; // precisa bater com --gap no CSS
-    var appMax = 430, gutter = 32; // ver .app { max-width; padding } no CSS
-    var maxWidth = Math.min(window.innerWidth - gutter, appMax - gutter);
-    var cell = Math.floor((maxWidth - gap * (boardCols - 1)) / boardCols);
-    cell = Math.max(28, Math.min(64, cell));
-    var font = Math.max(14, Math.round(cell * 0.44));
-    var root = document.documentElement.style;
-    root.setProperty('--cols', boardCols);
-    root.setProperty('--cell-size', cell + 'px');
-    root.setProperty('--cell-font', font + 'px');
-  }
-
   // ---------- montagem ----------
   function buildBoard() {
-    applyBoardSizing();
     boardEl.innerHTML = '';
-    boardEl.setAttribute('aria-label', 'Tabuleiro ' + boardRows + ' por ' + boardCols);
-    for (var r = 0; r < boardRows; r++) {
-      for (var c = 0; c < boardCols; c++) {
+    for (var r = 0; r < SIZE; r++) {
+      for (var c = 0; c < SIZE; c++) {
         var el = document.createElement('div');
         el.className = 'cell';
         el.setAttribute('role', 'gridcell');
@@ -531,11 +488,8 @@
     boardEl.addEventListener('pointerup', endDrag);
     boardEl.addEventListener('pointercancel', endDrag);
 
+    // impede rolagem/zoom ao traçar
     boardEl.addEventListener('touchmove', function (e) { e.preventDefault(); }, { passive: false });
-
-    window.addEventListener('resize', function () {
-      if (boardEl.children.length) applyBoardSizing();
-    });
   }
 
   function pickTodayIndex() {
@@ -551,8 +505,7 @@
       dayIndex: dayIndex,
       timeMs: state.completedMs || 0,
       hints: countHintsUsed(),
-      streak: loadStreak().count,
-      wordCount: wordCount
+      streak: loadStreak().count
     };
   }
 
@@ -577,47 +530,39 @@
     btnUndo = document.getElementById('btn-undo');
     btnReset = document.getElementById('btn-reset');
     btnShare = document.getElementById('btn-share');
-    winModal = document.getElementById('win-modal');
+    winPanel = document.getElementById('win-panel');
     winSummary = document.getElementById('win-summary');
-    winClose = document.getElementById('win-close');
     shareFeedback = document.getElementById('share-feedback');
     shareTextEl = document.getElementById('share-text');
-    recapEl = document.getElementById('result-recap');
-    recapText = document.getElementById('result-recap-text');
-    btnViewResult = document.getElementById('btn-view-result');
 
     btnHint.addEventListener('click', onHint);
     btnUndo.addEventListener('click', onUndo);
     btnReset.addEventListener('click', onReset);
     btnShare.addEventListener('click', onShare);
-    btnViewResult.addEventListener('click', openWinModal);
-    winClose.addEventListener('click', closeWinModal);
-    winModal.addEventListener('click', function (e) { if (e.target === winModal) closeWinModal(); });
-    document.addEventListener('keydown', function (e) {
-      if (e.key === 'Escape' && !winModal.hidden) closeWinModal();
-    });
 
     loadData().then(function (data) {
       DATA = data;
       var idx = pickTodayIndex();
       puzzle = DATA.puzzles[idx];
       puzzleId = puzzle.id;
-      boardRows = puzzle.rows;
-      boardCols = puzzle.cols;
-      wordCount = puzzle.words.length;
-      maxWordLen = puzzle.words.reduce(function (m, w) { return Math.max(m, w.length); }, 4);
 
       state = loadProgress();
-      state.solved = state.solved.filter(function (n) { return n >= 0 && n < wordCount; });
+      // sanidade: descarta índices de palavras inválidos
+      state.solved = state.solved.filter(function (n) { return n >= 0 && n < WORD_COUNT; });
 
       buildBoard();
       buildWordBank();
       attachBoardEvents();
-      emitGame('palavrilha:ready', { puzzleId: puzzleId, dayIndex: dayIndex, wordCount: wordCount });
+      emitGame('palavrilha:ready', { puzzleId: puzzleId, dayIndex: dayIndex });
 
       if (state.completed) {
         boardEl.classList.add('done');
-        showResult(resultSummaryText(loadStreak().count), false);
+        var hints = countHintsUsed();
+        winSummary.textContent =
+          'Nº ' + puzzleId + ' · tempo ' + fmtTime(state.completedMs) +
+          ' · ' + hints + (hints === 1 ? ' dica' : ' dicas') +
+          ' · sequência ' + loadStreak().count;
+        winPanel.hidden = false;
         say('Você já resolveu o quebra-cabeça de hoje. Volte amanhã! 🎉', 'good');
         emitGame('palavrilha:solved', solvedDetail());
       } else {
