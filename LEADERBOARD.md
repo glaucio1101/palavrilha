@@ -171,6 +171,35 @@ deles junto com o `v2_users/{mesmo uid}` correspondente e qualquer
 site normalmente (**Placar → Enviar link de entrada**) para criar sua conta
 definitiva.
 
+Uma dessas contas antigas (anônima) pode continuar **logada no seu próprio
+navegador** sem que você perceba, e isso pode fazer o clique no link de
+entrada parecer que "não funciona" — se acontecer, veja o troubleshooting
+logo abaixo.
+
+## "Cliquei no link e só pede meu e-mail de novo"
+
+Duas causas cobrem quase todos os casos:
+
+1. **Já existe uma sessão aberta nesse navegador** (comum se você testou o
+   placar antes desta versão, ou já tinha entrado com outro e-mail e não
+   clicou em "sair"). Toque em **sair** (ao lado do seu nome, se aparecer
+   algum nome) e clique no link de novo. Ele SEMPRE tem prioridade sobre
+   qualquer sessão já aberta — se ainda assim pedir e-mail de novo, é a
+   causa 2.
+2. **O link já morreu antes de você clicar** — cada link só funciona
+   **uma vez**. Se você clicou nele duas vezes (ex.: numa aba de prévia e
+   depois na aba de verdade), ou se o provedor de e-mail "abre" links
+   automaticamente para checar se são seguros antes de te mostrar a
+   mensagem (comum em contas Outlook/Microsoft 365 corporativas, e em
+   alguns antivírus de e-mail), o link é consumido antes da hora. A tela
+   agora mostra "Não deu para entrar com esse link" com um botão
+   **"Pedir um novo link"** nesse caso — não adianta digitar o e-mail nesse
+   link de novo, peça um novo mesmo.
+
+Se acontecer de novo e não se encaixar em nenhuma das duas, abra o console
+do navegador (F12) antes de clicar em "Confirmar" — o erro exato do Firebase
+fica registrado ali (`console.error`).
+
 ## Limitações conhecidas
 
 - **Convite ainda é manual** (digitar e-mail, botão "+" no Global, ou mandar

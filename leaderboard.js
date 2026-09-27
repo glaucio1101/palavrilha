@@ -107,7 +107,20 @@
     if (boot.day) currentDay = boot.day;
     if (boot.solved) pendingScore = boot.solved;
 
+    // Um link de entrada na URL tem PRIORIDADE sobre qualquer sessão já
+    // aberta neste navegador (ex.: uma sessão anônima antiga de antes desta
+    // troca para login por link) -- senão o app nunca chega a processar o
+    // link, e só mostra de novo a tela de "digite seu e-mail" (era exatamente
+    // o bug relatado). `emailLinkHandled` evita processar o mesmo link duas
+    // vezes quando o login concluir e este listener disparar de novo.
+    var emailLinkHandled = false;
+
     auth.onAuthStateChanged(function (user) {
+      if (!emailLinkHandled && auth.isSignInWithEmailLink(location.href)) {
+        emailLinkHandled = true;
+        handleIncomingEmailLink();
+        return;
+      }
       if (user) {
         loadPrivateProfile(user.uid).then(function (prof) {
           if (prof && prof.email) {
@@ -125,14 +138,8 @@
         }).catch(function (err) { setMsg(errText(err)); renderJoin(); });
         return;
       }
-      // Ninguém logado: se a URL é um link de entrada, concluir o login;
-      // senão, mostrar a tela normal de entrada.
-      if (auth.isSignInWithEmailLink(location.href)) {
-        handleIncomingEmailLink();
-      } else {
-        me = null;
-        renderJoin();
-      }
+      me = null;
+      renderJoin();
     });
 
     // ---------- perfil ----------
@@ -202,8 +209,12 @@
         cleanAuthParamsFromUrl();
         // onAuthStateChanged dispara de novo, agora com o usuário -> finishProfile.
       }).catch(function (err) {
-        setMsg(errText(err));
-        renderConfirmEmail();
+        // eslint-disable-next-line no-console
+        if (window.console) console.error('Palavrilha: falha ao concluir login por link', err);
+        var c = err && err.code ? err.code : '';
+        var deadLink = (c === 'auth/invalid-action-code' || c === 'auth/expired-action-code');
+        setMsg('');
+        renderConfirmEmail(errText(err), deadLink);
       });
     }
 
@@ -340,24 +351,47 @@
       document.getElementById('lb-resend').addEventListener('click', renderJoin);
     }
 
-    function renderConfirmEmail() {
+    function renderConfirmEmail(errorMsg, deadLink) {
       if (!bodyEl) return;
       tabsEl.hidden = true;
+
+      var intro = errorMsg
+        ? '<p class="lb-intro"><strong>Não deu para entrar com esse link:</strong> ' + esc(errorMsg) + '</p>' +
+          (deadLink
+            ? '<p class="lb-intro">Isso costuma acontecer quando o link já foi usado, expirou, ou o próprio ' +
+              'provedor de e-mail (comum no Outlook/Microsoft e em alguns e-mails corporativos) "abre" o link ' +
+              'sozinho para checar se é seguro antes de você clicar — e com isso o link morre antes da hora. ' +
+              'Peça um novo abaixo.</p>'
+            : '<p class="lb-intro">Confira se digitou o mesmo e-mail que usou para pedir o link, ou peça um ' +
+              'novo abaixo.</p>')
+        : '<p class="lb-intro">Para concluir a entrada, confirme o e-mail que você usou para pedir este link ' +
+          '(precisamos disso porque ele foi aberto num navegador ou app diferente de onde foi pedido).</p>';
+
       bodyEl.innerHTML =
-        '<p class="lb-intro">Para concluir a entrada, confirme o e-mail que você usou para pedir este link ' +
-        '(precisamos disso porque o link foi aberto num navegador diferente de onde ele foi pedido).</p>' +
+        intro +
+        (deadLink ? '' :
+          '<div class="lb-join">' +
+            '<input id="lb-confirm-email" class="lb-input" type="email" inputmode="email" ' +
+            'placeholder="seu@email.com">' +
+            '<button type="button" id="lb-confirm-btn" class="btn btn-primary lb-wide">Confirmar</button>' +
+          '</div>') +
         '<div class="lb-join">' +
-          '<input id="lb-confirm-email" class="lb-input" type="email" inputmode="email" ' +
-          'placeholder="seu@email.com">' +
-          '<button type="button" id="lb-confirm-btn" class="btn btn-primary lb-wide">Confirmar</button>' +
+          '<button type="button" id="lb-new-link" class="btn btn-ghost lb-wide">Pedir um novo link</button>' +
         '</div>';
-      var input = document.getElementById('lb-confirm-email');
-      document.getElementById('lb-confirm-btn').addEventListener('click', function () {
-        var email = normalizeEmail(input.value);
-        if (!email) { setMsg('Digite um e-mail válido.'); return; }
-        completeSignIn(email);
+
+      if (!deadLink) {
+        var input = document.getElementById('lb-confirm-email');
+        document.getElementById('lb-confirm-btn').addEventListener('click', function () {
+          var email = normalizeEmail(input.value);
+          if (!email) { setMsg('Digite um e-mail válido.'); return; }
+          completeSignIn(email);
+        });
+        input.addEventListener('keydown', function (e) { if (e.key === 'Enter') document.getElementById('lb-confirm-btn').click(); });
+      }
+      document.getElementById('lb-new-link').addEventListener('click', function () {
+        cleanAuthParamsFromUrl();
+        renderJoin();
       });
-      input.addEventListener('keydown', function (e) { if (e.key === 'Enter') document.getElementById('lb-confirm-btn').click(); });
     }
 
     function renderShell() {
@@ -587,7 +621,7 @@
       if (c === 'unavailable') return 'Sem conexão com o placar agora.';
       if (c === 'auth/network-request-failed') return 'Falha de rede ao entrar.';
       if (c === 'auth/invalid-action-code' || c === 'auth/expired-action-code') {
-        return 'Esse link expirou ou já foi usado. Peça um novo em "Usar outro e-mail".';
+        return 'Esse link expirou ou já foi usado.';
       }
       if (c === 'auth/invalid-email') return 'E-mail inválido.';
       if (c === 'auth/quota-exceeded') return 'Muitos pedidos de link agora. Tente de novo em alguns minutos.';
