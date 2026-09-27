@@ -1,8 +1,15 @@
 /* Palavrilha 2.0 — placar global e de amigos (opcional, via Firebase).
  *
- * Diferença do leaderboard.js da versão clássica (classic/leaderboard.js):
- * identidade é o seu E-MAIL (sem senha, sem verificação) em vez de um
- * apelido + código sorteado. Convidar um amigo = digitar o e-mail dele.
+ * Identidade = e-mail, via login por LINK (passwordless, "magic link") do
+ * Firebase Authentication. Sem senha, mas ao contrário da primeira versão
+ * disto, o mesmo e-mail sempre volta ao MESMO uid, em qualquer aparelho ou
+ * navegador — o Firebase garante isso. Isso elimina o problema de "a mesma
+ * pessoa aparece duas vezes no placar" que dava com login anônimo + rótulo.
+ *
+ * Pré-requisito no Firebase Console (ver LEADERBOARD.md):
+ *   Authentication -> Sign-in method -> Email/Password -> ativar e marcar
+ *   "Email link (passwordless sign-in)". Authentication -> Settings ->
+ *   Authorized domains -> adicionar o domínio do GitHub Pages.
  *
  * Coleções próprias (v2_*), independentes das da versão clássica, mesmo que
  * as duas usem o mesmo projeto Firebase:
@@ -97,15 +104,31 @@
     if (boot.solved) pendingScore = boot.solved;
 
     auth.onAuthStateChanged(function (user) {
-      if (!user) { me = null; renderJoin(); return; }
-      loadPrivateProfile(user.uid).then(function (prof) {
-        if (!prof || !prof.email) { renderJoin(user); return; }
-        me = prof;
-        tabsEl.hidden = false;
-        trySubmit();
-        refresh();
-        processInviteIfAny();
-      }).catch(function (err) { renderJoin(user); setMsg(errText(err)); });
+      if (user) {
+        loadPrivateProfile(user.uid).then(function (prof) {
+          if (prof && prof.email) {
+            me = prof;
+            tabsEl.hidden = false;
+            trySubmit();
+            refresh();
+            processInviteIfAny();
+            return;
+          }
+          // Usuário autenticado (login por link recém-concluído) mas ainda
+          // sem perfil: o e-mail já vem verificado pelo próprio Firebase.
+          if (user.email) finishProfile(user.uid, user.email);
+          else renderJoin();
+        }).catch(function (err) { setMsg(errText(err)); renderJoin(); });
+        return;
+      }
+      // Ninguém logado: se a URL é um link de entrada, concluir o login;
+      // senão, mostrar a tela normal de entrada.
+      if (auth.isSignInWithEmailLink(location.href)) {
+        handleIncomingEmailLink();
+      } else {
+        me = null;
+        renderJoin();
+      }
     });
 
     // ---------- perfil ----------
@@ -117,25 +140,75 @@
 
     function emailIndexRef(email) { return db.collection('v2_emailIndex').doc(email); }
 
-    function claimEmail(uid, email, force) {
-      return emailIndexRef(email).get().then(function (idxSnap) {
-        if (idxSnap.exists && idxSnap.data().uid !== uid && !force) {
-          return { conflict: true };
-        }
-        var displayName = email.split('@')[0].slice(0, 40);
-        return db.collection('v2_users').doc(uid).get().then(function (profSnap) {
-          var now = firebase.firestore.FieldValue.serverTimestamp();
-          var priv = profSnap.exists
-            ? assign({}, profSnap.data(), { email: email, displayName: displayName, updatedAt: now })
-            : { email: email, displayName: displayName, streak: 0, provider: 'anonymous', createdAt: now, updatedAt: now };
-          var pub = { displayName: displayName, streak: priv.streak || 0, updatedAt: now };
-          var batch = db.batch();
-          batch.set(db.collection('v2_users').doc(uid), priv, { merge: true });
-          batch.set(db.collection('v2_public').doc(uid), pub, { merge: true });
-          batch.set(emailIndexRef(email), { uid: uid }, { merge: true });
-          return batch.commit().then(function () { return { conflict: false, profile: assign({ uid: uid }, priv) }; });
-        });
+    // Cria/atualiza o perfil depois que o Firebase já confirmou o e-mail
+    // (login por link concluído). Nunca há conflito de identidade aqui: o
+    // Firebase sempre devolve o MESMO uid para o mesmo e-mail.
+    function finishProfile(uid, email) {
+      var displayName = email.split('@')[0].slice(0, 40);
+      db.collection('v2_users').doc(uid).get().then(function (profSnap) {
+        var now = firebase.firestore.FieldValue.serverTimestamp();
+        var priv = profSnap.exists
+          ? assign({}, profSnap.data(), { email: email, displayName: displayName, updatedAt: now })
+          : { email: email, displayName: displayName, streak: 0, provider: 'emailLink', createdAt: now, updatedAt: now };
+        var pub = { displayName: displayName, streak: priv.streak || 0, updatedAt: now };
+        var batch = db.batch();
+        batch.set(db.collection('v2_users').doc(uid), priv, { merge: true });
+        batch.set(db.collection('v2_public').doc(uid), pub, { merge: true });
+        batch.set(emailIndexRef(email), { uid: uid }, { merge: true });
+        return batch.commit();
+      }).then(function () {
+        me = assign({ uid: uid }, { email: email, displayName: displayName });
+        setMsg('');
+        tabsEl.hidden = false;
+        trySubmit();
+        refresh();
+        processInviteIfAny();
+      }).catch(function (err) { setMsg(errText(err)); });
+    }
+
+    // ---------- login por link (passwordless) ----------
+    var LB_NS = 'palavrilha:v2:lb:';
+    function lsGet(k) { try { return window.localStorage.getItem(LB_NS + k); } catch (e) { return null; } }
+    function lsSet(k, v) { try { window.localStorage.setItem(LB_NS + k, v); } catch (e) {} }
+    function lsDel(k) { try { window.localStorage.removeItem(LB_NS + k); } catch (e) {} }
+
+    function sendLoginLink(rawEmail) {
+      var email = normalizeEmail(rawEmail);
+      if (!email) { setMsg('Digite um e-mail válido.'); return; }
+      setMsg('Enviando link…');
+      var continueUrl = new URL(location.origin + location.pathname);
+      if (inviteEmail) continueUrl.searchParams.set('convite', inviteEmail);
+      auth.sendSignInLinkToEmail(email, { url: continueUrl.toString(), handleCodeInApp: true })
+        .then(function () {
+          lsSet('pendingEmail', email);
+          renderLinkSent(email);
+        }).catch(function (err) { setMsg(errText(err)); });
+    }
+
+    function handleIncomingEmailLink() {
+      var saved = lsGet('pendingEmail');
+      if (saved) { completeSignIn(saved); }
+      else { renderConfirmEmail(); }
+    }
+
+    function completeSignIn(email) {
+      setMsg('Entrando…');
+      auth.signInWithEmailLink(email, location.href).then(function () {
+        lsDel('pendingEmail');
+        cleanAuthParamsFromUrl();
+        // onAuthStateChanged dispara de novo, agora com o usuário -> finishProfile.
+      }).catch(function (err) {
+        setMsg(errText(err));
+        renderConfirmEmail();
       });
+    }
+
+    function cleanAuthParamsFromUrl() {
+      try {
+        var url = new URL(location.href);
+        ['apiKey', 'oobCode', 'mode', 'lang', 'continueUrl'].forEach(function (k) { url.searchParams.delete(k); });
+        history.replaceState(null, '', url.pathname + url.search + url.hash);
+      } catch (e) {}
     }
 
     // ---------- envio de pontuação ----------
@@ -177,7 +250,7 @@
     }
 
     function refresh() {
-      if (!me) { renderJoin(auth.currentUser); return; }
+      if (!me) { renderJoin(); return; }
       renderShell();
       if (activeTab === 'global') loadGlobal();
       else loadFriends();
@@ -231,59 +304,59 @@
       tabsEl.hidden = true;
       var intro = (inviteEmail && !inviteProcessed)
         ? '<p class="lb-intro">Você foi convidado por <strong>' + esc(inviteEmail.split('@')[0]) +
-          '</strong> para jogar Palavrilha! Registre seu e-mail e vocês já ficam conectados no ' +
-          'placar de amigos.</p>'
-        : '<p class="lb-intro">Registre seu e-mail para aparecer no placar global e convidar amigos. ' +
-          'É opcional — dá para jogar sem entrar. Não pedimos senha; é só um identificador.</p>';
+          '</strong> para jogar Palavrilha! Digite seu e-mail: mandamos um link de entrada (sem senha) ' +
+          'e vocês já ficam conectados no placar de amigos.</p>'
+        : '<p class="lb-intro">Digite seu e-mail para aparecer no placar global e convidar amigos. ' +
+          'Sem senha — a gente manda um link de entrada por e-mail. É opcional, dá para jogar sem entrar.</p>';
       bodyEl.innerHTML =
         intro +
         '<div class="lb-join">' +
           '<input id="lb-email" class="lb-input" type="email" inputmode="email" autocomplete="email" ' +
           'maxlength="254" placeholder="seu@email.com">' +
-          '<button type="button" id="lb-enter" class="btn btn-primary lb-wide">Entrar</button>' +
+          '<button type="button" id="lb-enter" class="btn btn-primary lb-wide">Enviar link de entrada</button>' +
         '</div>';
       var emailInput = document.getElementById('lb-email');
-      document.getElementById('lb-enter').addEventListener('click', function () { doJoin(emailInput.value, false); });
-      emailInput.addEventListener('keydown', function (e) { if (e.key === 'Enter') doJoin(emailInput.value, false); });
+      document.getElementById('lb-enter').addEventListener('click', function () { sendLoginLink(emailInput.value); });
+      emailInput.addEventListener('keydown', function (e) { if (e.key === 'Enter') sendLoginLink(emailInput.value); });
     }
 
-    function renderEmailConflict(email) {
+    function renderLinkSent(email) {
+      tabsEl.hidden = true;
+      setMsg('');
+      bodyEl.innerHTML =
+        '<p class="lb-intro">Enviamos um link de entrada para <strong>' + esc(email) + '</strong>. Abra sua ' +
+        'caixa de entrada (confira o spam também) e toque no link — você volta aqui já conectado. Pode fechar ' +
+        'esta aba com segurança.</p>' +
+        '<div class="lb-join">' +
+          '<button type="button" id="lb-resend" class="btn btn-ghost lb-wide">Usar outro e-mail</button>' +
+        '</div>';
+      document.getElementById('lb-resend').addEventListener('click', renderJoin);
+    }
+
+    function renderConfirmEmail() {
       tabsEl.hidden = true;
       bodyEl.innerHTML =
-        '<p class="lb-intro">O e-mail <strong>' + esc(email) + '</strong> já foi usado no Palavrilha em outro ' +
-        'navegador ou aparelho. Como o login aqui é simples (sem senha), não dá para recuperar aquela conta a ' +
-        'partir daqui.</p>' +
+        '<p class="lb-intro">Para concluir a entrada, confirme o e-mail que você usou para pedir este link ' +
+        '(precisamos disso porque o link foi aberto num navegador diferente de onde ele foi pedido).</p>' +
         '<div class="lb-join">' +
-          '<button type="button" id="lb-force" class="btn btn-ghost lb-wide">Usar este e-mail mesmo assim</button>' +
-          '<button type="button" id="lb-back" class="btn btn-primary lb-wide">Usar outro e-mail</button>' +
+          '<input id="lb-confirm-email" class="lb-input" type="email" inputmode="email" ' +
+          'placeholder="seu@email.com">' +
+          '<button type="button" id="lb-confirm-btn" class="btn btn-primary lb-wide">Confirmar</button>' +
         '</div>';
-      document.getElementById('lb-force').addEventListener('click', function () { doJoin(email, true); });
-      document.getElementById('lb-back').addEventListener('click', function () { renderJoin(); });
-    }
-
-    function doJoin(rawEmail, force) {
-      var email = normalizeEmail(rawEmail);
-      if (!email) { setMsg('Digite um e-mail válido.'); return; }
-      setMsg('Entrando…');
-      var signIn = auth.currentUser ? Promise.resolve(auth.currentUser)
-        : auth.signInAnonymously().then(function (c) { return c.user; });
-      signIn.then(function (user) {
-        return claimEmail(user.uid, email, force);
-      }).then(function (result) {
-        if (result.conflict) { setMsg(''); renderEmailConflict(email); return; }
-        me = result.profile;
-        setMsg('');
-        tabsEl.hidden = false;
-        trySubmit();
-        refresh();
-        processInviteIfAny();
-      }).catch(function (err) { setMsg(errText(err)); });
+      var input = document.getElementById('lb-confirm-email');
+      document.getElementById('lb-confirm-btn').addEventListener('click', function () {
+        var email = normalizeEmail(input.value);
+        if (!email) { setMsg('Digite um e-mail válido.'); return; }
+        completeSignIn(email);
+      });
+      input.addEventListener('keydown', function (e) { if (e.key === 'Enter') document.getElementById('lb-confirm-btn').click(); });
     }
 
     function renderShell() {
       bodyEl.innerHTML =
         '<div class="lb-you">' +
-          '<span>Você: <strong>' + esc(me.displayName) + '</strong></span>' +
+          '<span>Você: <strong>' + esc(me.displayName) + '</strong> ' +
+            '<button type="button" id="lb-signout" class="lb-linklike">sair</button></span>' +
           '<span class="lb-code" title="Amigos digitam este e-mail para te adicionar">convite: ' +
             '<strong>' + esc(me.email) + '</strong></span>' +
         '</div>' +
@@ -304,6 +377,13 @@
         fi.addEventListener('keydown', function (e) { if (e.key === 'Enter') addFriend(fi.value); });
         document.getElementById('lb-invite-link').addEventListener('click', shareInviteLink);
       }
+      document.getElementById('lb-signout').addEventListener('click', function () {
+        auth.signOut().then(function () {
+          me = null;
+          lsDel('pendingEmail');
+          renderJoin();
+        });
+      });
     }
 
     function listInto(html) {
@@ -497,6 +577,17 @@
       if (c === 'permission-denied') return 'Sem permissão (confira as regras do Firestore).';
       if (c === 'unavailable') return 'Sem conexão com o placar agora.';
       if (c === 'auth/network-request-failed') return 'Falha de rede ao entrar.';
+      if (c === 'auth/invalid-action-code' || c === 'auth/expired-action-code') {
+        return 'Esse link expirou ou já foi usado. Peça um novo em "Usar outro e-mail".';
+      }
+      if (c === 'auth/invalid-email') return 'E-mail inválido.';
+      if (c === 'auth/quota-exceeded') return 'Muitos pedidos de link agora. Tente de novo em alguns minutos.';
+      if (c === 'auth/unauthorized-continue-uri') {
+        return 'Domínio não autorizado no Firebase (Authentication → Settings → Authorized domains).';
+      }
+      if (c === 'auth/operation-not-allowed') {
+        return 'Login por link ainda não foi ativado no Firebase (Authentication → Sign-in method → Email/Password → Email link).';
+      }
       return (err && err.message) ? err.message : 'Erro ao falar com o placar.';
     }
   }
