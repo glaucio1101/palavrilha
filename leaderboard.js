@@ -328,6 +328,10 @@
         if (played) rank++;
         var isMe = r.uid === myUid;
         if (isMe) myShown = true;
+        var addBtn = (!opts.friends && !isMe)
+          ? '<button type="button" class="lb-addbtn" data-uid="' + esc(r.uid) + '" ' +
+            'data-name="' + esc(r.displayName) + '" aria-label="Adicionar ' + esc(r.displayName) + ' aos amigos">+</button>'
+          : '';
         html += '<li class="lb-row' + (isMe ? ' is-me' : '') + '">' +
           '<span class="lb-rank">' + (played ? rank : '·') + '</span>' +
           '<span class="lb-name">' + esc(r.displayName) + (isMe ? ' <span class="lb-tagme">você</span>' : '') + '</span>' +
@@ -336,10 +340,19 @@
                     : '<span class="lb-pending">ainda não jogou</span>') +
             (r.streak ? ' <span class="lb-streak">🔥' + r.streak + '</span>' : '') +
           '</span>' +
+          addBtn +
         '</li>';
       });
       html += '</ol>';
       listInto(html);
+
+      if (!opts.friends) {
+        [].slice.call(document.querySelectorAll('#lb-list .lb-addbtn')).forEach(function (btn) {
+          btn.addEventListener('click', function () {
+            addFriendByUid(btn.getAttribute('data-uid'), btn.getAttribute('data-name'), btn);
+          });
+        });
+      }
 
       if (opts.showRankOutside && me && !myShown && currentDay) {
         var mineRef = db.collection('v2_scores').doc(String(currentDay.dayIndex)).collection('entries').doc(me.uid);
@@ -365,13 +378,26 @@
       emailIndexRef(email).get().then(function (snap) {
         if (!snap.exists) { setMsg('Ninguém com esse e-mail jogou o Palavrilha ainda. Convide essa pessoa a entrar!'); return; }
         var uid = snap.data().uid;
-        return db.collection('v2_users').doc(me.uid).collection('friends').doc(uid).set({
-          email: email, since: firebase.firestore.FieldValue.serverTimestamp()
-        }).then(function () {
+        var displayName = email.split('@')[0].slice(0, 40);
+        return writeFriend(uid, displayName).then(function () {
           setMsg('Amigo adicionado.');
           if (activeTab !== 'friends') setTab('friends'); else refresh();
         });
       }).catch(function (err) { setMsg(errText(err)); });
+    }
+
+    function addFriendByUid(uid, displayName, btnEl) {
+      if (!me || !uid || uid === me.uid) return;
+      writeFriend(uid, displayName).then(function () {
+        setMsg('Adicionado aos seus amigos.');
+        if (btnEl) { btnEl.textContent = '✓'; btnEl.disabled = true; }
+      }).catch(function (err) { setMsg(errText(err)); });
+    }
+
+    function writeFriend(uid, displayName) {
+      return db.collection('v2_users').doc(me.uid).collection('friends').doc(uid).set({
+        displayName: displayName, since: firebase.firestore.FieldValue.serverTimestamp()
+      }, { merge: true });
     }
 
     // ---------- convite por link (SMS, WhatsApp, iMessage…) ----------

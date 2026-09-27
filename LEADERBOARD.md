@@ -106,6 +106,13 @@ mesmo modelo de "amigo" de mão única descrito em "Limitações conhecidas"
 abaixo) — se você também quiser ver os tempos dela, adicione o e-mail dela
 manualmente (ou peça para ela te mandar o link dela de volta).
 
+## Adicionar direto pelo placar Global
+
+Cada linha do placar **Global** (menos a sua) tem um botão **"+"**. Toque
+nele para adicionar aquela pessoa aos seus amigos na hora, sem precisar
+saber o e-mail dela — útil quando você já vê alguém no Global e só quer
+acompanhar essa pessoa.
+
 ---
 
 ## Como os dados são organizados
@@ -113,7 +120,7 @@ manualmente (ou peça para ela te mandar o link dela de volta).
 | Caminho | Visibilidade | Conteúdo |
 |---|---|---|
 | `v2_users/{uid}` | privado (só o dono lê) | `email`, `displayName`, `streak`, datas |
-| `v2_users/{uid}/friends/{uid do amigo}` | privado | `email` do amigo, `since` |
+| `v2_users/{uid}/friends/{uid do amigo}` | privado | `displayName` do amigo, `since` |
 | `v2_public/{uid}` | público (qualquer logado) | `displayName`, `streak` — **sem e-mail** |
 | `v2_emailIndex/{email}` | só busca por chave exata | `{ uid }` — não é possível listar todos os e-mails |
 | `v2_scores/{dayIndex}/entries/{uid}` | público | `displayName`, `timeMs`, `hints`, `streak`, `puzzleId` — **sem e-mail** |
