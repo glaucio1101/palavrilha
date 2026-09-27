@@ -63,7 +63,56 @@ body {
 }
 
 /* ---------- Cabeçalho ---------- */
-.topbar { display: flex; align-items: center; }
+.topbar { display: flex; align-items: center; gap: 10px; position: relative; }
+
+.menu-btn {
+  flex: none;
+  width: 40px; height: 40px;
+  border-radius: 12px;
+  border: 1px solid var(--line);
+  background: var(--surface);
+  box-shadow: var(--shadow);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.menu-btn span { display: block; width: 18px; height: 2px; border-radius: 2px; background: var(--ink); }
+.menu-btn:active { transform: translateY(1px); }
+
+.app-menu {
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 0;
+  z-index: 60;
+  min-width: 220px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  box-shadow: 0 12px 30px rgba(0, 0, 0, .18);
+  padding: 6px;
+  display: flex;
+  flex-direction: column;
+}
+.app-menu[hidden] { display: none; }
+.menu-item {
+  font: inherit;
+  font-size: 14px;
+  font-weight: 700;
+  text-align: left;
+  text-decoration: none;
+  color: var(--ink);
+  background: none;
+  border: 0;
+  border-radius: 9px;
+  padding: 11px 12px;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.menu-item:active { background: var(--bg); }
 
 .brand { display: flex; align-items: center; gap: 12px; }
 
@@ -256,6 +305,7 @@ main { display: flex; flex-direction: column; gap: 14px; }
 }
 .message.error { color: var(--brand-dark); font-weight: 600; }
 .message.good  { color: #1f7a4d; font-weight: 600; }
+.message a { color: var(--brand-dark); font-weight: 700; }
 
 /* ---------- Botões ---------- */
 .controls {
@@ -344,6 +394,8 @@ main { display: flex; flex-direction: column; gap: 14px; }
 }
 .modal-card h2 { margin: 0 0 6px; font-size: 21px; color: var(--brand-dark); }
 .modal-card > p { margin: 0 0 14px; font-size: 14px; color: var(--ink-soft); }
+.modal-card .btn + .btn { margin-top: 10px; }
+.modal-card a.btn { display: block; box-sizing: border-box; text-decoration: none; text-align: center; }
 .share-feedback { min-height: 16px; font-size: 13px; color: #1f7a4d; margin: 8px 0 0; }
 .share-text {
   width: 100%;
@@ -452,20 +504,11 @@ main { display: flex; flex-direction: column; gap: 14px; }
 }
 .lb-msg { margin: 10px 0 0; min-height: 16px; font-size: 13px; color: var(--brand-dark); text-align: center; }
 
-/* ---------- Como jogar ---------- */
-.howto {
-  background: var(--surface);
-  border: 1px solid var(--line);
-  border-radius: 16px;
-  padding: 14px 16px;
-  box-shadow: var(--shadow);
-}
-.howto h3 { margin: 0 0 8px; font-size: 15px; }
+/* ---------- Como jogar (dentro do popup, aberto pelo menu) ---------- */
+.modal-card.howto { text-align: left; }
 .howto ul { margin: 0; padding-left: 18px; }
 .howto li { font-size: 13px; color: var(--ink-soft); margin: 5px 0; line-height: 1.45; }
 .howto .credits { margin: 10px 0 0; font-size: 11px; color: var(--ink-soft); opacity: .8; }
-.howto .legal { margin: 6px 0 0; font-size: 12px; }
-.howto .legal a { color: var(--brand-dark); font-weight: 600; }
 
 @media (prefers-color-scheme: dark) {
   :root {

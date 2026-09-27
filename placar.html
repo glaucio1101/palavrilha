@@ -7,7 +7,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="Palavrilha">
-<title>Palavrilha</title>
+<title>Placar — Palavrilha</title>
 <!-- Todos os caminhos são relativos para funcionar servido de uma subpasta
      (ex.: usuario.github.io/palavrilha/). -->
 <link rel="icon" href="favicon.svg" type="image/svg+xml">
@@ -33,70 +33,36 @@
       </svg>
       <div class="brand-text">
         <h1>Palavrilha</h1>
-        <p id="puzzle-label">Quebra-cabeça de palavras</p>
+        <p>Placar</p>
       </div>
     </div>
     <nav id="app-menu" class="app-menu" hidden>
-      <a class="menu-item" href="placar.html">Placar</a>
+      <a class="menu-item" href="index.html">← Jogar</a>
       <button type="button" id="menu-howto" class="menu-item">Como jogar</button>
       <a class="menu-item" href="privacy.html">Política de Privacidade</a>
       <a class="menu-item" href="classic/index.html">Versão clássica</a>
     </nav>
   </header>
 
-  <section class="stats" aria-label="Situação do jogo">
-    <div class="stat">
-      <span class="stat-label">Tempo</span>
-      <span class="stat-value" id="timer">00:00</span>
-    </div>
-    <div class="stat">
-      <span class="stat-label">Palavras</span>
-      <span class="stat-value" id="progress">0/5</span>
-    </div>
-    <div class="stat">
-      <span class="stat-label">Sequência</span>
-      <span class="stat-value" id="streak">0</span>
-    </div>
-  </section>
-
   <main>
-    <div id="board" class="board" role="grid" aria-label="Tabuleiro do dia"></div>
-
-    <section class="wordbank" aria-label="Palavras para encontrar">
-      <p class="wordbank-title">Palavras para encontrar</p>
-      <div id="wordbank" class="wordbank-rows"></div>
+    <section id="lb" class="lb" hidden>
+      <div class="lb-top">
+        <h2>Placar</h2>
+        <div id="lb-tabs" class="lb-tabs" hidden>
+          <button type="button" class="lb-tab is-active" data-tab="global">Global</button>
+          <button type="button" class="lb-tab" data-tab="friends">Amigos</button>
+        </div>
+      </div>
+      <div id="lb-body" class="lb-body"><p class="lb-empty">Carregando…</p></div>
+      <p id="lb-msg" class="lb-msg" role="status" aria-live="polite"></p>
     </section>
 
-    <p id="message" class="message" role="status" aria-live="polite">
-      Toque numa letra e siga pelas células vizinhas para traçar uma palavra.
+    <p id="lb-offline" class="message" hidden>
+      O placar está desligado (o jogo ainda não foi configurado com um projeto do Firebase, ou você está sem
+      internet). <a href="index.html">Voltar ao jogo</a>.
     </p>
-
-    <div class="controls">
-      <button type="button" id="btn-hint" class="btn btn-ghost">Dica</button>
-      <button type="button" id="btn-undo" class="btn btn-ghost">Desfazer</button>
-      <button type="button" id="btn-reset" class="btn btn-ghost">Reiniciar</button>
-    </div>
-
-    <div id="result-recap" class="result-recap" hidden>
-      <span id="result-recap-text">Resolvido</span>
-      <button type="button" id="btn-view-result" class="btn btn-primary">Ver resultado</button>
-    </div>
   </main>
 
-  <!-- Popup de resultado: aparece na hora, sem precisar rolar a página. -->
-  <div id="win-modal" class="modal-backdrop" hidden>
-    <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="win-title">
-      <button type="button" id="win-close" class="modal-close" aria-label="Fechar">&times;</button>
-      <h2 id="win-title">Parabéns! 🎉</h2>
-      <p id="win-summary">Você resolveu o quebra-cabeça de hoje.</p>
-      <button type="button" id="btn-share" class="btn btn-primary lb-wide">Compartilhar</button>
-      <a href="placar.html" class="btn btn-ghost lb-wide">Ver Placar</a>
-      <p id="share-feedback" class="share-feedback" aria-live="polite"></p>
-      <textarea id="share-text" class="share-text" readonly hidden></textarea>
-    </div>
-  </div>
-
-  <!-- "Como jogar", antes um rodapé fixo, agora só aparece via o menu. -->
   <div id="howto-modal" class="modal-backdrop" hidden>
     <div class="modal-card howto" role="dialog" aria-modal="true" aria-labelledby="howto-title">
       <button type="button" id="howto-close" class="modal-close" aria-label="Fechar">&times;</button>
@@ -114,15 +80,38 @@
 
 </div>
 
-<script src="puzzles.js"></script>
-<script src="game.js"></script>
 <script src="menu.js"></script>
 
-<!-- Placar opcional (global e de amigos). Se firebase-config.js estiver vazio,
-     leaderboard.js não carrega nada e o jogo segue 100% igual e offline. Aqui
-     na página do jogo ele roda "sem tela" (só envia sua pontuação quando você
-     termina o desafio) — a tela do placar em si mora em placar.html. -->
+<!-- Esta página não roda o jogo (sem game.js) — só precisa saber qual é o
+     quebra-cabeça de hoje para montar a chave do placar do dia. puzzles.js
+     traz os dados; este bloco calcula o mesmo índice que game.js usa. -->
+<script src="puzzles.js"></script>
+<script>
+(function () {
+  try {
+    var DATA = window.PALAVRILHA_PUZZLES;
+    if (!DATA || !DATA.puzzles || !DATA.count) return;
+    var d = new Date();
+    var dayIndex = Math.floor(new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime() / 86400000);
+    var idx = ((dayIndex % DATA.count) + DATA.count) % DATA.count;
+    var puzzle = DATA.puzzles[idx];
+    window.__PALAVRILHA__ = window.__PALAVRILHA__ || {};
+    window.__PALAVRILHA__.day = { puzzleId: puzzle.id, dayIndex: dayIndex, wordCount: puzzle.words.length };
+  } catch (e) {}
+})();
+</script>
 <script src="firebase-config.js"></script>
 <script src="leaderboard.js"></script>
+<script>
+(function () {
+  // Se o placar não estiver configurado, leaderboard.js deixa #lb hidden.
+  // Nesse caso, mostra uma explicação em vez de uma seção vazia.
+  var lb = document.getElementById('lb');
+  var offline = document.getElementById('lb-offline');
+  window.setTimeout(function () {
+    if (lb && lb.hidden && offline) offline.hidden = false;
+  }, 400);
+})();
+</script>
 </body>
 </html>

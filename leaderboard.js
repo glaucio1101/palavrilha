@@ -26,12 +26,16 @@
 (function () {
   'use strict';
 
+  // #lb (a seção visível do placar) só existe em placar.html. Em index.html
+  // não existe tela nenhuma daqui — o jogo só precisa que este arquivo
+  // escute o resultado do dia e envie a pontuação, "sem tela". Por isso o
+  // gate de "está configurado?" não depende de #lb existir; cada função de
+  // desenho abaixo se protege sozinha (não faz nada se os elementos dela
+  // não existirem na página atual).
   var CFG = window.PALAVRILHA_FIREBASE;
   var lb = document.getElementById('lb');
-  if (!lb) return;
-
   var configured = CFG && CFG.apiKey && CFG.projectId && CFG.appId && CFG.authDomain;
-  if (!configured) { lb.hidden = true; return; }
+  if (!configured) { if (lb) lb.hidden = true; return; }
 
   var SDK = '10.14.1';
   var BASE = 'https://www.gstatic.com/firebasejs/' + SDK + '/';
@@ -50,11 +54,11 @@
     .then(function () { return loadScript(BASE + 'firebase-auth-compat.js'); })
     .then(function () { return loadScript(BASE + 'firebase-firestore-compat.js'); })
     .then(start)
-    .catch(function () { lb.hidden = true; });
+    .catch(function () { if (lb) lb.hidden = true; });
 
   // ==========================================================================
   function start() {
-    if (typeof firebase === 'undefined' || !firebase.initializeApp) { lb.hidden = true; return; }
+    if (typeof firebase === 'undefined' || !firebase.initializeApp) { if (lb) lb.hidden = true; return; }
 
     var bodyEl = document.getElementById('lb-body');
     var tabsEl = document.getElementById('lb-tabs');
@@ -79,10 +83,10 @@
       });
       db = firebase.firestore();
       auth = firebase.auth();
-    } catch (e) { lb.hidden = true; return; }
+    } catch (e) { if (lb) lb.hidden = true; return; }
 
-    lb.hidden = false;
-    tabsEl.hidden = true;
+    if (lb) lb.hidden = false;
+    if (tabsEl) tabsEl.hidden = true;
     setMsg('');
 
     tabButtons.forEach(function (b) {
@@ -108,7 +112,7 @@
         loadPrivateProfile(user.uid).then(function (prof) {
           if (prof && prof.email) {
             me = prof;
-            tabsEl.hidden = false;
+            if (tabsEl) tabsEl.hidden = false;
             trySubmit();
             refresh();
             processInviteIfAny();
@@ -159,7 +163,7 @@
       }).then(function () {
         me = assign({ uid: uid }, { email: email, displayName: displayName });
         setMsg('');
-        tabsEl.hidden = false;
+        if (tabsEl) tabsEl.hidden = false;
         trySubmit();
         refresh();
         processInviteIfAny();
@@ -250,6 +254,7 @@
     }
 
     function refresh() {
+      if (!bodyEl) return;  // sem tela nesta página (ex.: index.html) -- nada para desenhar
       if (!me) { renderJoin(); return; }
       renderShell();
       if (activeTab === 'global') loadGlobal();
@@ -301,6 +306,7 @@
 
     // ---------- render ----------
     function renderJoin() {
+      if (!bodyEl) return;
       tabsEl.hidden = true;
       var intro = (inviteEmail && !inviteProcessed)
         ? '<p class="lb-intro">Você foi convidado por <strong>' + esc(inviteEmail.split('@')[0]) +
@@ -321,6 +327,7 @@
     }
 
     function renderLinkSent(email) {
+      if (!bodyEl) return;
       tabsEl.hidden = true;
       setMsg('');
       bodyEl.innerHTML =
@@ -334,6 +341,7 @@
     }
 
     function renderConfirmEmail() {
+      if (!bodyEl) return;
       tabsEl.hidden = true;
       bodyEl.innerHTML =
         '<p class="lb-intro">Para concluir a entrada, confirme o e-mail que você usou para pedir este link ' +
@@ -353,6 +361,7 @@
     }
 
     function renderShell() {
+      if (!bodyEl) return;
       bodyEl.innerHTML =
         '<div class="lb-you">' +
           '<span>Você: <strong>' + esc(me.displayName) + '</strong> ' +

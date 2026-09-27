@@ -62,11 +62,13 @@ para a versão clássica.
 
 | Arquivo | Papel |
 |---|---|
-| `index.html`, `styles.css`, `game.js` | O app 2.0. Caminhos relativos — funciona em subpasta (ex.: `usuario.github.io/palavrilha/`). |
+| `index.html`, `styles.css`, `game.js` | O app 2.0 (jogo). Caminhos relativos — funciona em subpasta (ex.: `usuario.github.io/palavrilha/`). |
+| `placar.html` | Página própria do Placar (Global/Amigos) — acessada pelo menu ☰ ou pelo botão "Ver Placar" no popup de resultado. |
+| `menu.js` | Menu hambúrguer (☰) e o popup "Como jogar" — compartilhado por `index.html` e `placar.html`. |
 | `puzzles.json` / `puzzles.js` | 60 quebra-cabeças pré-gerados (1–60) da 2.0. |
 | `generate-puzzles.js` | Gerador em Node.js da 2.0 (uso local, não vai para o navegador). |
 | `wordlist-ptbr.txt` | Lista de palavras usada pelos dois geradores (2.0 e clássico). |
-| `leaderboard.js`, `firebase-config.js` | Placar opcional por e-mail (ver `LEADERBOARD.md`). |
+| `leaderboard.js`, `firebase-config.js` | Placar opcional por e-mail (ver `LEADERBOARD.md`). Em `index.html` roda "sem tela" (só envia sua pontuação); a tela completa mora em `placar.html`. |
 | `firestore.rules` | Regras do Firestore — cobre as coleções da 2.0 e da clássica no mesmo arquivo. |
 | `privacy.html` | Política de privacidade única para as duas versões. |
 | `classic/` | Versão 1.0 completa e congelada — seu próprio `README.md`, `LEADERBOARD.md`, gerador e dados. |
