@@ -41,9 +41,11 @@ service cloud.firestore {
 
       allow delete: if isSelf(uid);
 
-      // Lista de amigos: cada um edita SOMENTE a própria.
+      // Lista de amigos: cada um edita SOMENTE a própria, e não pode se
+      // adicionar como amigo de si mesmo.
       match /friends/{friendUid} {
-        allow read, write: if isSelf(uid);
+        allow read: if isSelf(uid);
+        allow write: if isSelf(uid) && friendUid != uid;
       }
     }
 
@@ -87,8 +89,10 @@ service cloud.firestore {
       allow delete: if isSelf(uid);
 
       // Lista de amigos (uid deles), guardada dentro do próprio perfil privado.
+      // Ninguém pode se adicionar como amigo de si mesmo (friendUid != uid).
       match /friends/{friendUid} {
-        allow read, write: if isSelf(uid);
+        allow read: if isSelf(uid);
+        allow write: if isSelf(uid) && friendUid != uid;
       }
     }
 
