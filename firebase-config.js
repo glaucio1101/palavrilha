@@ -12,8 +12,8 @@
  * (firestore.rules).
  */
 window.PALAVRILHA_FIREBASE = {
-  apiKey: '',
-  authDomain: '',
-  projectId: '',
-  appId: ''
+  apiKey: 'AIzaSyCTcibDEZ1YN-TOW3FlHn6hLQB_r41p_Ic',
+  authDomain: 'palavrilha.firebaseapp.com',
+  projectId: 'palavrilha',
+  appId: '1:213985620405:web:0675d9ea7db2f572db69fc'
 };
