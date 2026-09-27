@@ -62,6 +62,8 @@
     var busy = false;
 
     var EMAIL_RE = /^[^\s@]{1,64}@[^\s@]{1,190}\.[^\s@]{2,24}$/;
+    var inviteEmail = readInviteParam();  // ?convite=fulano@exemplo.com na URL
+    var inviteProcessed = false;
 
     try {
       firebase.initializeApp({
@@ -102,6 +104,7 @@
         tabsEl.hidden = false;
         trySubmit();
         refresh();
+        processInviteIfAny();
       }).catch(function (err) { renderJoin(user); setMsg(errText(err)); });
     });
 
@@ -226,9 +229,14 @@
     // ---------- render ----------
     function renderJoin() {
       tabsEl.hidden = true;
+      var intro = (inviteEmail && !inviteProcessed)
+        ? '<p class="lb-intro">Você foi convidado por <strong>' + esc(inviteEmail.split('@')[0]) +
+          '</strong> para jogar Palavrilha! Registre seu e-mail e vocês já ficam conectados no ' +
+          'placar de amigos.</p>'
+        : '<p class="lb-intro">Registre seu e-mail para aparecer no placar global e convidar amigos. ' +
+          'É opcional — dá para jogar sem entrar. Não pedimos senha; é só um identificador.</p>';
       bodyEl.innerHTML =
-        '<p class="lb-intro">Registre seu e-mail para aparecer no placar global e convidar amigos. ' +
-        'É opcional — dá para jogar sem entrar. Não pedimos senha; é só um identificador.</p>' +
+        intro +
         '<div class="lb-join">' +
           '<input id="lb-email" class="lb-input" type="email" inputmode="email" autocomplete="email" ' +
           'maxlength="254" placeholder="seu@email.com">' +
@@ -268,6 +276,7 @@
         tabsEl.hidden = false;
         trySubmit();
         refresh();
+        processInviteIfAny();
       }).catch(function (err) { setMsg(errText(err)); });
     }
 
@@ -283,7 +292,9 @@
               '<input id="lb-friend" class="lb-input" type="email" inputmode="email" ' +
               'placeholder="E-mail do amigo">' +
               '<button type="button" id="lb-add" class="btn btn-ghost">Adicionar</button>' +
-            '</div>'
+            '</div>' +
+            '<button type="button" id="lb-invite-link" class="btn btn-ghost lb-wide">' +
+              'Convidar por link (SMS, WhatsApp…)</button>'
           : '') +
         '<div id="lb-list" class="lb-list"><p class="lb-empty">Carregando…</p></div>';
 
@@ -291,6 +302,7 @@
         var fi = document.getElementById('lb-friend');
         document.getElementById('lb-add').addEventListener('click', function () { addFriend(fi.value); });
         fi.addEventListener('keydown', function (e) { if (e.key === 'Enter') addFriend(fi.value); });
+        document.getElementById('lb-invite-link').addEventListener('click', shareInviteLink);
       }
     }
 
@@ -360,6 +372,77 @@
           if (activeTab !== 'friends') setTab('friends'); else refresh();
         });
       }).catch(function (err) { setMsg(errText(err)); });
+    }
+
+    // ---------- convite por link (SMS, WhatsApp, iMessage…) ----------
+    function readInviteParam() {
+      try {
+        var params = new URLSearchParams(location.search);
+        var raw = params.get('convite');
+        return raw ? normalizeEmail(raw) : null;
+      } catch (e) { return null; }
+    }
+
+    function stripInviteParam() {
+      try {
+        var url = new URL(location.href);
+        url.searchParams.delete('convite');
+        history.replaceState(null, '', url.pathname + url.search + url.hash);
+      } catch (e) {}
+    }
+
+    function processInviteIfAny() {
+      if (!inviteEmail || inviteProcessed || !me) return;
+      inviteProcessed = true;
+      if (inviteEmail !== me.email) addFriend(inviteEmail);
+      stripInviteParam();
+    }
+
+    function buildInviteLink() {
+      var url = new URL(location.href);
+      url.search = ''; url.hash = '';
+      url.searchParams.set('convite', me.email);
+      return url.toString();
+    }
+
+    function shareInviteLink() {
+      var link = buildInviteLink();
+      var text = 'Jogue Palavrilha comigo! 🧩 Abra este link para a gente aparecer no placar de amigos um do outro:';
+      setMsg('');
+      if (navigator.share) {
+        navigator.share({ title: 'Palavrilha', text: text, url: link }).then(function () {
+          setMsg('Convite compartilhado!');
+        }).catch(function (err) {
+          if (err && err.name === 'AbortError') return;
+          copyInvite(text + '\n' + link);
+        });
+        return;
+      }
+      copyInvite(text + '\n' + link);
+    }
+
+    function copyInvite(full) {
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(full).then(function () {
+          setMsg('Link copiado! Cole numa mensagem (SMS, WhatsApp, iMessage…).');
+        }).catch(function () { fallbackCopyInvite(full); });
+      } else {
+        fallbackCopyInvite(full);
+      }
+    }
+
+    function fallbackCopyInvite(full) {
+      var ta = document.createElement('textarea');
+      ta.value = full;
+      ta.setAttribute('readonly', '');
+      ta.style.position = 'fixed';
+      ta.style.left = '-9999px';
+      document.body.appendChild(ta);
+      ta.focus(); ta.select();
+      var ok = false;
+      try { ok = document.execCommand('copy'); } catch (e) {}
+      document.body.removeChild(ta);
+      setMsg(ok ? 'Link copiado! Cole numa mensagem (SMS, WhatsApp, iMessage…).' : full);
     }
 
     // ---------- utilidades ----------

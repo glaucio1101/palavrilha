@@ -84,7 +84,27 @@ git push
 Abra o site, termine o desafio do dia, digite um e-mail em **Placar → Entrar**
 e você aparece no **Global**. Na aba **Amigos**, seu **e-mail** fica visível
 para você mesmo — combine com um amigo para vocês se adicionarem mutuamente
-(cada um digita o e-mail do outro).
+(cada um digita o e-mail do outro), ou use o botão **"Convidar por link"**
+(ver abaixo).
+
+## Convidar por link (SMS, WhatsApp, iMessage…)
+
+Na aba **Amigos**, o botão **"Convidar por link (SMS, WhatsApp…)"** gera um
+link com o seu e-mail embutido (`?convite=voce@email.com`) e abre a folha de
+compartilhamento nativa (`navigator.share`) — ou copia o texto, se o
+navegador não tiver isso. Manda por SMS, WhatsApp, iMessage, e-mail etc.
+
+Quando a pessoa convidada abre o link:
+
+- Se ela ainda não tem cadastro, a tela de entrada já avisa quem convidou e,
+  assim que ela digitar o próprio e-mail, os dois já ficam conectados.
+- Se ela já tem cadastro, você é adicionado à lista de amigos dela
+  automaticamente, na hora, sem precisar digitar nada.
+
+Isso só adiciona **você à lista de quem a pessoa convidada acompanha** (o
+mesmo modelo de "amigo" de mão única descrito em "Limitações conhecidas"
+abaixo) — se você também quiser ver os tempos dela, adicione o e-mail dela
+manualmente (ou peça para ela te mandar o link dela de volta).
 
 ---
 
