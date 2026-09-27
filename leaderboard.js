@@ -365,7 +365,10 @@
             : '<p class="lb-intro">Confira se digitou o mesmo e-mail que usou para pedir o link, ou peça um ' +
               'novo abaixo.</p>')
         : '<p class="lb-intro">Para concluir a entrada, confirme o e-mail que você usou para pedir este link ' +
-          '(precisamos disso porque ele foi aberto num navegador ou app diferente de onde foi pedido).</p>';
+          '(precisamos disso porque ele foi aberto num navegador ou aparelho diferente de onde foi pedido).</p>' +
+          '<p class="lb-intro">Cada link só funciona <strong>uma vez, no primeiro aparelho que o usar</strong>. ' +
+          'Se você já entrou com ele em outro computador ou celular, este aqui não vai funcionar — peça um ' +
+          'novo direto <em>deste</em> aparelho.</p>';
 
       bodyEl.innerHTML =
         intro +
